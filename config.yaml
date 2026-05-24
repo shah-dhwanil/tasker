@@ -1,0 +1,23 @@
+service_name: tasker
+environment: development
+
+server:
+  port: 8000
+  read_timeout: 20
+  write_timeout: 20
+  idle_timeout: 20
+  cors_allowed_origins:
+    - http://localhost:3000
+    - http://localhost:5173
+
+postgres:
+  max_open_conns: 3
+  max_idle_conns: 3
+  min_idle_conns: 3
+  ping_timeout: 10
+  conn_max_lifetime: 60
+  conn_max_idle_time: 60
+
+new_relic:
+  app_log_forwarding_enabled: true
+  distributed_tracing_enabled: true
