@@ -1,4 +1,4 @@
-package errors
+package errorhandler
 
 import (
 	"errors"
@@ -6,34 +6,35 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/shah-dhwanil/tasker/internal/schema"
+	pkgErrors "github.com/shah-dhwanil/tasker/internal/errors"
 )
 
-var mapErrorToStatusCode = map[ErrorType]int{
-	Validation: 400,
-	Unknown:    500,
+var mapErrorToStatusCode = map[pkgErrors.ErrorType]int{
+	pkgErrors.Validation: 400,
+	pkgErrors.Unknown:    500,
 }
 
-func GetStatusCodeForErrorType(errorType ErrorType) int {
+func GetStatusCodeForErrorType(errorType pkgErrors.ErrorType) int {
 	if statusCode, exists := mapErrorToStatusCode[errorType]; exists {
 		return statusCode
 	}
 	return 500 // Default to Internal Server Error if the error type is not mapped
 }
 
-func GetTypeForStatusCode(code int)ErrorType{
+func GetTypeForStatusCode(code int)pkgErrors.ErrorType{
 	for errorType, statusCode := range mapErrorToStatusCode {
 		if int(statusCode) == code {
 			return errorType
 		}
 	}
-	return Unknown
+	return pkgErrors.Unknown
 }
 
 func HandleError(err error) *schema.ErrorResponse {
-	var appError *appError
-	var validationError *ValidationError
+	var appError *pkgErrors.AppError
+	var validationError *pkgErrors.ValidationError
 	var httpError *echo.HTTPError
-	var databaseError *DatabaseError
+	var databaseError *pkgErrors.DatabaseError
 	
 	switch {
 	case errors.As(err, &appError):
@@ -67,14 +68,14 @@ func HandleError(err error) *schema.ErrorResponse {
 	case errors.As(err, &databaseError):
 		return &schema.ErrorResponse{
 			StatusCode: 500,
-			Type: string(Unknown),
+			Type: string(pkgErrors.Unknown),
 			Title: "Unkown Error",
 			Detail:    "An unkown error occurred while processing the request.",
 		}
 	default:
 		return &schema.ErrorResponse{
 			StatusCode: 500,
-			Type: string(Unknown),
+			Type: string(pkgErrors.Unknown),
 			Title: "Unkown Error",
 			Detail:    "An unkown error occurred while processing the request.",
 		}

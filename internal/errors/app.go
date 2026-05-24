@@ -9,7 +9,7 @@ const (
 )
 
 // AppError is a custom error type representing any error occured during the execution of the application.
-type appError struct {
+type AppError struct {
 	Type    ErrorType `json:"type"` // Type of the error, e.g., validation_error, unknown_error, etc.
 	Title   string    `json:"title"` // A short, human-readable summary of the error.
 	Message string    `json:"message"` // A detailed description of the error, providing more context and information about what went wrong.
@@ -18,16 +18,16 @@ type appError struct {
 	wrappedError error `json:"-"` // The original error that caused this AppError, if applicable. This field is not included in JSON serialization.
 }
 
-func (e *appError) Error() string {
+func (e *AppError) Error() string {
 	return fmt.Sprintf("%s [%s]: %s",e.Type, e.Title, e.Message)
 }
 
-func (e *appError) Unwrap() error {
+func (e *AppError) Unwrap() error {
 	return e.wrappedError
 }
 
-func NewInternalError(title, message string, context map[string]any, wrappedError error) *appError {
-	return &appError{
+func NewInternalError(title, message string, context map[string]any, wrappedError error) *AppError {
+	return &AppError{
 		Type:        Unknown,
 		Title:       title,
 		Message:     message,

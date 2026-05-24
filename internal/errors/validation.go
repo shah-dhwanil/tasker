@@ -3,7 +3,7 @@ package errors
 import "fmt"
 
 type ValidationError struct {
-	appError
+	AppError
 	FieldErrors []FieldValidationError `json:"fieldErrors,omitempty"`
 }
 
@@ -46,7 +46,7 @@ func NewFieldValidationError(err_type string, description string, location strin
 
 func NewValidationError(message string, fieldErrors []FieldValidationError, orignalError error) *ValidationError{
 	return &ValidationError{
-		appError: appError{
+		AppError: AppError{
 			Type: Validation,
 			Title: "Validation Error",
 			Message: message,
@@ -58,7 +58,7 @@ func NewValidationError(message string, fieldErrors []FieldValidationError, orig
 
 func NewBindingError(orignalError error) *ValidationError{
 	return &ValidationError{
-		appError: appError{
+		AppError: AppError{
 			Type: Validation,
 			Title: "Invalid Request",
 			Message: "Failed to bind the request. Please ensure the request is well-formed and adheres to the expected schema.",

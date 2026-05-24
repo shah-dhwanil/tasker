@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/shah-dhwanil/tasker/internal/errors"
+	errorhandler "github.com/shah-dhwanil/tasker/internal/error_handler"
 	"github.com/shah-dhwanil/tasker/internal/handler"
 	"github.com/shah-dhwanil/tasker/internal/middleware"
 	"github.com/shah-dhwanil/tasker/internal/repository"
@@ -29,7 +29,7 @@ func NewServer(services *Services) *Server {
 		if c.Response().Committed {
 			return
 		}
-		res:= errors.HandleError(err)
+		res:= errorhandler.HandleError(err)
 		c.JSON(res.StatusCode,res)
 	}
 	middleware.Setup(server, services.Config(),services.Observability())
