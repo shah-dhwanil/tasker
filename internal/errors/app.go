@@ -4,8 +4,11 @@ import "fmt"
 
 type ErrorType string
 const (
-	Validation ErrorType = "validation_error"
-	Unknown    ErrorType = "unknown_error"
+	ResourceAlreadyExists ErrorType = "RESOURCE_ALREADY_EXISTS"
+	ResourceNotFound      ErrorType = "RESOURCE_NOT_FOUND"
+	Validation ErrorType = "VALIDATION_ERROR"
+	Internal   ErrorType = "INTERNAL_ERROR"
+	Unknown    ErrorType = "UNKNOWN_ERROR"
 )
 
 // AppError is a custom error type representing any error occured during the execution of the application.
@@ -26,7 +29,7 @@ func (e *AppError) Unwrap() error {
 	return e.wrappedError
 }
 
-func NewInternalError(title, message string, context map[string]any, wrappedError error) *AppError {
+func NewUnknownError(wrappedError error, title, message string, context map[string]any) *AppError {
 	return &AppError{
 		Type:        Unknown,
 		Title:       title,

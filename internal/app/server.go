@@ -33,7 +33,7 @@ func NewServer(services *Services) *Server {
 		c.JSON(res.StatusCode,res)
 	}
 	middleware.Setup(server, services.Config(),services.Observability())
-	handlers := handler.New(service.New(repository.New()))
+	handlers := handler.New(service.New(repository.New(services.db)))
 	routes.RegisterRoutes(server,handlers)
 	return &Server{
 		httpServer: server,

@@ -1,8 +1,9 @@
 -- Write your migrate up statements here
 
-CREATE SCHEMA IF NOT EXISTS jira;
+-- Create schema
+CREATE SCHEMA IF NOT EXISTS tasker;
 
-CREATE OR REPLACE FUNCTION camel(input_row anyelement)
+CREATE OR REPLACE FUNCTION tasker.camel(input_row anyelement)
     RETURNS jsonb
     LANGUAGE plpgsql
     AS $$
@@ -24,7 +25,7 @@ END;
 $$;
 
 -- Create updated_at trigger function
-CREATE OR REPLACE FUNCTION trigger_set_updated_at()
+CREATE OR REPLACE FUNCTION tasker.trigger_set_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
