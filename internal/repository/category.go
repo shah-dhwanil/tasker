@@ -230,6 +230,45 @@ func (r *CategoryRepository) DeleteCategory(ctx context.Context, categoryID uuid
 }
 
 
+const countCategoriesQuery = `
+SELECT COUNT(*)
+FROM tasker.todo_categories
+WHERE %s
+`
+
+func (r *CategoryRepository) CountCategories(ctx context.Context, userID *uuid.UUID, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
+	whereClause := make([]string, 0)
+	args := pgx.NamedArgs{}
+	if userID != nil {
+		whereClause = append(whereClause, "user_id = @user_id")
+		args["user_id"] = userID.String()
+	}
+	if payload.Search != nil {
+		whereClause = append(whereClause, "name ILIKE @search")
+		args["search"] = fmt.Sprintf("%%%s%%", *payload.Search)
+	}
+	if !includeDeletedRecords {
+		whereClause = append(whereClause, "is_deleted = false")
+	}
+	query := fmt.Sprintf(countCategoriesQuery, database.ConstructWhereClause(whereClause))
+	
+	count, err := database.QueryInTransaction(
+		ctx,
+		r.executor,
+		func(executor database.Transaction) (int, error) {
+			row := executor.QueryRow(ctx, query, args)
+			var total int
+			err := row.Scan(&total)
+			return total, err
+		},
+	)
+	if err != nil {
+		return 0, mapErrorToCategoryRepositoryError(err, args)
+	}
+	return count, nil
+}
+
+
 func mapErrorToCategoryRepositoryError(err error, payload pgx.NamedArgs) error {
 	err, ok := pkgErrors.ConvertPgError(err)
 	if !ok {
