@@ -67,7 +67,7 @@ func (payload *GetCategoriesQuery) Validate(client validation.ValidatorClient) e
 	return client.Struct(payload)
 }
 
-func (payload *GetCategoriesQuery) Normalize() *GetCategoriesQuery {
+func (payload *GetCategoriesQuery) Normalize() (*GetCategoriesQuery, error) {
 	if payload.Page == nil {
 		defaultPage := 1
 		payload.Page = &defaultPage
@@ -81,7 +81,7 @@ func (payload *GetCategoriesQuery) Normalize() *GetCategoriesQuery {
 	if len(payload.OrderBy) == 0 {
 		payload.OrderBy = []string{"-created_at"}
 	}
-	return payload
+	return payload, nil
 }	
 
 type GetCategoriesResponse struct {

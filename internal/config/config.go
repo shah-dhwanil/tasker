@@ -32,6 +32,7 @@ type Config struct {
 	NewRelic  NewRelicConfig `koanf:"new_relic" validate:"required"`
 	Postgres	PostgresConfig  `koanf:"postgres" validate:"required"`
 	Server      ServerConfig    `koanf:"server" validate:"required"`
+	Clerk ClerkConfig     `koanf:"clerk" validate:"required"`
 }
 
 func (payload *Config) Validate(validatorClient validation.ValidatorClient) error {

@@ -1,0 +1,348 @@
+definitions:
+  github_com_shah-dhwanil_tasker_internal_schema.PaginatedResponse-schema_GetCategoriesResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/schema.GetCategoriesResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      statusCode:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Category:
+    properties:
+      data:
+        $ref: '#/definitions/schema.Category'
+      statusCode:
+        type: integer
+    type: object
+  github_com_shah-dhwanil_tasker_internal_schema.Response-schema_CreateCategoryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/schema.CreateCategoryResponse'
+      statusCode:
+        type: integer
+    type: object
+  github_com_shah-dhwanil_tasker_internal_schema.Response-schema_UpdateCategoryResponse:
+    properties:
+      data:
+        $ref: '#/definitions/schema.UpdateCategoryResponse'
+      statusCode:
+        type: integer
+    type: object
+  schema.Category:
+    properties:
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      updatedAt:
+        type: string
+      userID:
+        type: string
+    type: object
+  schema.CreateCategoryRequest:
+    properties:
+      description:
+        maxLength: 256
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        maxLength: 32
+        type: string
+    required:
+    - name
+    type: object
+  schema.CreateCategoryResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  schema.ErrorResponse:
+    properties:
+      detail:
+        description: Detail is an explanation specific to this error occurrence.
+        example: Property foo is required but is missing.
+        type: string
+      errors:
+        items: {}
+        type: array
+      resource:
+        example: User
+        type: string
+      statusCode:
+        example: 400
+        format: int32
+        type: integer
+      title:
+        description: |-
+          Title provides a short static summary of the problem. Huma will default this
+          to the HTTP response status code text if not present.
+        example: Bad Request
+        type: string
+      type:
+        default: about:blank
+        example: https://example.com/errors/example
+        format: uri
+        type: string
+    type: object
+  schema.GetCategoriesResponse:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+    type: object
+  schema.UpdateCategoryRequest:
+    properties:
+      description:
+        maxLength: 256
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        maxLength: 32
+        type: string
+    type: object
+  schema.UpdateCategoryResponse:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      name:
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /categories:
+    get:
+      consumes:
+      - application/json
+      description: Get all categories for the authenticated user with pagination and
+        search
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Search term
+        in: query
+        maxLength: 32
+        name: search
+        type: string
+      - collectionFormat: csv
+        description: Order by fields
+        in: query
+        items:
+          type: string
+        name: order_by
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.PaginatedResponse-schema_GetCategoriesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all categories
+      tags:
+      - categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new category for the authenticated user
+      parameters:
+      - description: Category details
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/schema.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_CreateCategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - categories
+  /categories/{categoryId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing category for the authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a category
+      tags:
+      - categories
+    get:
+      consumes:
+      - application/json
+      description: Get a single category for the authenticated user by its ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Category'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a category by ID
+      tags:
+      - categories
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing category for the authenticated user
+      parameters:
+      - description: Category ID
+        in: path
+        name: categoryId
+        required: true
+        type: string
+      - description: Category update details
+        in: body
+        name: category
+        required: true
+        schema:
+          $ref: '#/definitions/schema.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_UpdateCategoryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a category
+      tags:
+      - categories
+swagger: "2.0"

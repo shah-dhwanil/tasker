@@ -4,6 +4,7 @@ import "fmt"
 
 type ErrorType string
 const (
+	Unauthorized ErrorType = "UNAUTHORIZED"
 	ResourceAlreadyExists ErrorType = "RESOURCE_ALREADY_EXISTS"
 	ResourceNotFound      ErrorType = "RESOURCE_NOT_FOUND"
 	Validation ErrorType = "VALIDATION_ERROR"

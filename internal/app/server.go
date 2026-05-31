@@ -6,12 +6,14 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	errorhandler "github.com/shah-dhwanil/tasker/internal/error_handler"
 	"github.com/shah-dhwanil/tasker/internal/handler"
 	"github.com/shah-dhwanil/tasker/internal/middleware"
 	"github.com/shah-dhwanil/tasker/internal/repository"
 	"github.com/shah-dhwanil/tasker/internal/routes"
 	"github.com/shah-dhwanil/tasker/internal/service"
+	_ "github.com/shah-dhwanil/tasker/docs"
 	"go.uber.org/zap"
 )
 
@@ -33,6 +35,7 @@ func NewServer(services *Services) *Server {
 		c.JSON(res.StatusCode,res)
 	}
 	middleware.Setup(server, services.Config(),services.Observability())
+	server.GET("/swagger/*", echoSwagger.WrapHandler)
 	handlers := handler.New(service.New(repository.New(services.db)))
 	routes.RegisterRoutes(server,handlers)
 	return &Server{

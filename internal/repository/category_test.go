@@ -380,7 +380,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "B"},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -408,7 +408,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "B's"},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -440,7 +440,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 
 				search := "shop"
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					Search: &search,
 				}).Normalize()
 
@@ -476,7 +476,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "Beta"},
 				)
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					OrderBy: []string{"name"},
 				}).Normalize()
 
@@ -515,7 +515,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -535,7 +535,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				nonExistentUser := uuid.New()
 
@@ -576,7 +576,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				limit := 2
 				page := 2
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					Limit:   &limit,
 					Page:    &page,
 					OrderBy: []string{"name"},
@@ -615,7 +615,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "Gamma"},
 				)
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					OrderBy: []string{"-name"},
 				}).Normalize()
 
@@ -654,7 +654,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -680,7 +680,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "UserB"},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -1275,7 +1275,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "C"},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1319,7 +1319,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					&schema.CreateCategoryRequest{Name: "B's"},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1361,7 +1361,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 
 				search := "shop"
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					Search: &search,
 				}).Normalize()
 
@@ -1408,7 +1408,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1453,7 +1453,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1501,7 +1501,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					},
 				)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1519,7 +1519,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				query := (&schema.GetCategoriesQuery{}).Normalize()
+				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
 				nonExistentUser := uuid.New()
 
@@ -1563,7 +1563,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 
 				search := "nonexistent"
 
-				query := (&schema.GetCategoriesQuery{
+				query, _ := (&schema.GetCategoriesQuery{
 					Search: &search,
 				}).Normalize()
 
