@@ -10,9 +10,10 @@ import (
 
 // TxFn represents a function that executes within a transaction
 type TxFn func(tx pgx.Tx) 
+type TxFnErr func(tx pgx.Tx) error
 
 // WithTransaction runs a function within a transaction and rolls it back afterward
-func WithTransaction(ctx context.Context, db database.PgPool, fn TxFn) error {
+func WithTransaction(ctx context.Context, db database.PgPool, fn TxFnErr) error {
 	// Begin transaction
 	tx, err := db.Begin(ctx)
 	if err != nil {
@@ -23,7 +24,7 @@ func WithTransaction(ctx context.Context, db database.PgPool, fn TxFn) error {
 	defer tx.Rollback(ctx)
 
 	// Run the function within the transaction
-	fn(tx)
+	err=fn(tx)
 
 	// Transaction was successful, commit it
 	if err := tx.Commit(ctx); err != nil {

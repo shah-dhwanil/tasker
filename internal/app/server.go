@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/clerk/clerk-sdk-go/v2"
 	"github.com/labstack/echo/v4"
-	echoSwagger "github.com/swaggo/echo-swagger"
+	_ "github.com/shah-dhwanil/tasker/docs"
 	errorhandler "github.com/shah-dhwanil/tasker/internal/error_handler"
 	"github.com/shah-dhwanil/tasker/internal/handler"
 	"github.com/shah-dhwanil/tasker/internal/middleware"
 	"github.com/shah-dhwanil/tasker/internal/repository"
 	"github.com/shah-dhwanil/tasker/internal/routes"
 	"github.com/shah-dhwanil/tasker/internal/service"
-	_ "github.com/shah-dhwanil/tasker/docs"
+	echoSwagger "github.com/swaggo/echo-swagger"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +25,7 @@ type Server struct {
 
 func NewServer(services *Services) *Server {
 	server := echo.New()
+	clerk.SetKey(services.Config().Clerk.SecretKey)
 	server.Server.IdleTimeout = time.Duration(services.Config().Server.IdleTimeout) * time.Second
 	server.Server.WriteTimeout = time.Duration(services.Config().Server.WriteTimeout) * time.Second
 	server.Server.ReadTimeout = time.Duration(services.Config().Server.ReadTimeout) * time.Second

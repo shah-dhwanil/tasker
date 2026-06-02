@@ -21,12 +21,12 @@ type categoryService interface {
 	DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error
 }
 
-type categoryHandler struct {
+type CategoryHandler struct {
 	CategoryService categoryService
 }
 
-func newCategoryHandler(service *service.Service) *categoryHandler {
-	return &categoryHandler{
+func NewCategoryHandler(service *service.Service) *CategoryHandler {
+	return &CategoryHandler{
 		CategoryService: service.CategoryService,
 	}
 }
@@ -60,7 +60,7 @@ func (r *UpdateCategoryRequest) Validate(client validation.ValidatorClient) erro
 // @Failure      409  {object}  schema.ErrorResponse
 // @Router       /categories [post]
 // @Security     BearerAuth
-func (h *categoryHandler) CreateCategory(c echo.Context, req *schema.CreateCategoryRequest) error {
+func (h *CategoryHandler) CreateCategory(c echo.Context, req *schema.CreateCategoryRequest) error {
 	userID, err := getUserID(c)
 	if err != nil {
 		return err
@@ -89,7 +89,7 @@ func (h *categoryHandler) CreateCategory(c echo.Context, req *schema.CreateCateg
 // @Failure      404  {object}  schema.ErrorResponse
 // @Router       /categories/{categoryId} [get]
 // @Security     BearerAuth
-func (h *categoryHandler) GetCategoryByID(c echo.Context, req *CategoryIDRequest) error {
+func (h *CategoryHandler) GetCategoryByID(c echo.Context, req *CategoryIDRequest) error {
 	userID, err := getUserID(c)
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func (h *categoryHandler) GetCategoryByID(c echo.Context, req *CategoryIDRequest
 // @Failure      401  {object}  schema.ErrorResponse
 // @Router       /categories [get]
 // @Security     BearerAuth
-func (h *categoryHandler) GetAllCategories(c echo.Context, req *schema.GetCategoriesQuery) error {
+func (h *CategoryHandler) GetAllCategories(c echo.Context, req *schema.GetCategoriesQuery) error {
 	userID, err := getUserID(c)
 	if err != nil {
 		return err
@@ -147,7 +147,7 @@ func (h *categoryHandler) GetAllCategories(c echo.Context, req *schema.GetCatego
 // @Failure      404  {object}  schema.ErrorResponse
 // @Router       /categories/{categoryId} [patch]
 // @Security     BearerAuth
-func (h *categoryHandler) UpdateCategory(c echo.Context, req *UpdateCategoryRequest) error {
+func (h *CategoryHandler) UpdateCategory(c echo.Context, req *UpdateCategoryRequest) error {
 	userID, err := getUserID(c)
 	if err != nil {
 		return err
@@ -176,7 +176,7 @@ func (h *categoryHandler) UpdateCategory(c echo.Context, req *UpdateCategoryRequ
 // @Failure      404  {object}  schema.ErrorResponse
 // @Router       /categories/{categoryId} [delete]
 // @Security     BearerAuth
-func (h *categoryHandler) DeleteCategory(c echo.Context, req *CategoryIDRequest) error {
+func (h *CategoryHandler) DeleteCategory(c echo.Context, req *CategoryIDRequest) error {
 	userID, err := getUserID(c)
 	if err != nil {
 		return err

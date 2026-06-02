@@ -85,7 +85,7 @@ func setupServer(t *testing.T, mockSvc *MockCategoryService, userID *uuid.UUID) 
 		}
 	}
 
-	h := &categoryHandler{CategoryService: mockSvc}
+	h := &CategoryHandler{CategoryService: mockSvc}
 	group := e.Group("/api/v1/categories")
 	if userID != nil {
 		group.Use(authMiddleware(*userID))
