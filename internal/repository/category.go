@@ -80,7 +80,7 @@ func (r *CategoryRepository) GetCategoryByID(ctx context.Context, categoryID uui
 		ctx,
 		r.executor,
 		func(d database.Transaction) (schema.Category,error) {
-			rows, _ := r.executor.Query(ctx, getByIDQueryWithDeleted, args)
+			rows, _ := d.Query(ctx, getByIDQueryWithDeleted, args)
 			return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[schema.Category])
 		},
 	)
