@@ -60,7 +60,7 @@ type GetCategoriesQuery struct {
 	Page     *int `query:"page" validate:"gte=1" db:"page" `
 	Limit    *int `query:"limit" validate:"gte=1,lte=100" db:"limit"`
 	Search  *string `query:"search" validate:"omitempty,max=32" db:"search"`
-	OrderBy  []string `query:"order_by" validate:"omitempty, dive,contains=name|contains=created_at|contains=updated_at" db:"order_by"`
+	OrderBy  []string `query:"order_by" validate:"omitempty,dive,contains=name|contains=created_at|contains=updated_at" db:"order_by"`
 }
 
 func (payload *GetCategoriesQuery) Validate(client validation.ValidatorClient) error {

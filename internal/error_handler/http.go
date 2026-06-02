@@ -12,6 +12,10 @@ import (
 var mapErrorToStatusCode = map[pkgErrors.ErrorType]int{
 	pkgErrors.Validation: 400,
 	pkgErrors.Unknown:    500,
+	pkgErrors.Unauthorized: 401,
+	pkgErrors.ResourceNotFound: 404,
+	pkgErrors.ResourceAlreadyExists: 409,
+	
 }
 
 func GetStatusCodeForErrorType(errorType pkgErrors.ErrorType) int {

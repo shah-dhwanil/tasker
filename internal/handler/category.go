@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -12,8 +13,16 @@ import (
 	"github.com/shah-dhwanil/tasker/internal/validation"
 )
 
+type categoryService interface {
+	CreateCategory(ctx context.Context, userID uuid.UUID, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error)
+	GetCategoryByID(ctx context.Context, userID, categoryID uuid.UUID) (*schema.Category, error)
+	GetAllCategories(ctx context.Context, userID uuid.UUID, query *schema.GetCategoriesQuery) (*schema.PaginatedResponse[schema.GetCategoriesResponse], error)
+	UpdateCategory(ctx context.Context, userID, categoryID uuid.UUID, req *schema.UpdateCategoryRequest) (*schema.UpdateCategoryResponse, error)
+	DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error
+}
+
 type categoryHandler struct {
-	CategoryService *service.CategoryService
+	CategoryService categoryService
 }
 
 func newCategoryHandler(service *service.Service) *categoryHandler {
