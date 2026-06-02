@@ -3,6 +3,7 @@ package errors
 import (
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -40,6 +41,12 @@ const (
 	// due to reaching the maximum number of connections.
 	// This is different from blocking waiting on a connection pool.
 	TooManyConnections Code = "TooManyConnections"
+
+	// NoRecordsFound is reported when a query returns no rows.
+	NoRecordsFound Code = "NoRecordsFound"
+
+	// TooManyRows is reported when a query returns more rows than expected.
+	TooManyRowsFound Code = "TooManyRows"
 )
 
 func MapCode(code string) Code {
@@ -148,21 +155,51 @@ func (pe *DatabaseError) Unwrap() error {
 }
 
 func ConvertPgError(err error) (error, bool) {
-	var src *pgconn.PgError
-	if errors.As(err, &src) {
+	var dbError *pgconn.PgError
+	var pgError *DatabaseError
+	if errors.As(err, &pgError) {
+		return pgError, true
+	}
+	if errors.As(err, &dbError) {
 		return &DatabaseError{
-			Code:           MapCode(src.Code),
-			Severity:       MapSeverity(src.Severity),
-			DatabaseCode:   src.Code,
-			Message:        src.Message,
-			SchemaName:     src.SchemaName,
-			TableName:      src.TableName,
-			ColumnName:     src.ColumnName,
-			DataTypeName:   src.DataTypeName,
-			ConstraintName: src.ConstraintName,
-			driverErr:      src,
+			Code:           MapCode(dbError.Code),
+			Severity:       MapSeverity(dbError.Severity),
+			DatabaseCode:   dbError.Code,
+			Message:        dbError.Message,
+			SchemaName:     dbError.SchemaName,
+			TableName:      dbError.TableName,
+			ColumnName:     dbError.ColumnName,
+			DataTypeName:   dbError.DataTypeName,
+			ConstraintName: dbError.ConstraintName,
+			driverErr:      dbError,
+		}, true
+	}
+	if errors.Is(err, pgx.ErrNoRows) {
+		return &DatabaseError{
+			Code:     NoRecordsFound,
+			Severity: SeverityLog,
+			Message:  "No rows were returned by the query",
+			driverErr: err,
+		}, true
+	}
+	if errors.Is(err, pgx.ErrTooManyRows) {
+		return &DatabaseError{
+			Code:     TooManyRowsFound,
+			Severity: SeverityWarning,
+			Message:  "Too many rows were returned by the query",
+			driverErr: err,
 		}, true
 	}
 	return err, false
 
+}
+
+func NewStructToPayloadConversionError(err error, resource string) *AppError {
+	return &AppError{
+		Type:        Internal,
+		Title:       "Struct to Payload Conversion Error",
+		Message:     "Failed to convert struct to payload: " + err.Error(),
+		Resource:    &resource,
+		wrappedError: err,
+	}
 }

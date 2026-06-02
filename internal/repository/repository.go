@@ -1,10 +1,14 @@
 package repository
 
+import "github.com/shah-dhwanil/tasker/internal/database"
+
 
 type Repository struct {
-	// Add any common fields or methods for repositories here
+	CategoryRepository *CategoryRepository
 }
 
-func New() *Repository{
-	return &Repository{}
+func New(pool database.PgPool) *Repository{
+	return &Repository{
+		CategoryRepository: newCategoryRepository(pool),
+	}
 }

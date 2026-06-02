@@ -5,7 +5,6 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
-	"strings"
 
 	"github.com/shah-dhwanil/tasker/internal/config"
 	"github.com/shah-dhwanil/tasker/internal/observability"
@@ -26,7 +25,7 @@ func Migrate(ctx context.Context, config *config.Config, logger observability.Lo
 	}
 	defer conn.Close(ctx)
 
-	m, err := tern.NewMigrator(ctx, conn, fmt.Sprintf("%s.schema_version",strings.ToLower(config.ServiceName)))
+	m, err := tern.NewMigrator(ctx, conn, "schema_version")
 	if err != nil {
 		return fmt.Errorf("constructing database migrator: %w", err)
 	}
