@@ -185,6 +185,9 @@ func ConstructSetClause(fields []string) string {
 
 func QueryInTransaction[T any](ctx context.Context, executor DBTX, fn func(pgx.Tx)(T,error)) (T,error) {
 	var zero T
+	if executor == nil {
+		return zero, errors.NewUnknownError(nil, "Database Error", "Database connection is not initialized", nil)
+	}
 	txn,err:=executor.Begin(ctx)
 	if err!=nil {
 		dbError,ok :=errors.ConvertPgError(err)

@@ -23,8 +23,12 @@ type AppError struct {
 }
 
 func (e *AppError) Error() string {
-	return fmt.Sprintf("%s [%s]: %s - %s",e.Type, e.Title, e.Message,e.wrappedError.Error())
+    if e.wrappedError != nil {
+        return fmt.Sprintf("%s [%s]: %s - %s", e.Type, e.Title, e.Message, e.wrappedError.Error())
+    }
+    return fmt.Sprintf("%s [%s]: %s", e.Type, e.Title, e.Message)
 }
+
 
 func (e *AppError) Unwrap() error {
 	return e.wrappedError

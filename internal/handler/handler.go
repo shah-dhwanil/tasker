@@ -13,12 +13,14 @@ import (
 type Handler struct {
 	CategoryHandler *CategoryHandler
 	HealthHandler   *HealthHandler
+	TodoHandler     *TodoHandler
 }
 
 func New(service *service.Service) *Handler {
 	return &Handler{
 		CategoryHandler: NewCategoryHandler(service),
 		HealthHandler:   &HealthHandler{},
+		TodoHandler:     NewTodoHandler(service),
 	}
 }
 
