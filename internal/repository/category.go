@@ -36,7 +36,7 @@ VALUES (@id, @name, @user_id, @description, @metadata)
 RETURNING id, name, description, metadata, created_at, updated_at
 `
 
-func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id uuid.UUID, category *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
+func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id string, category *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
 	logger := observability.FromContext(ctx)
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id uuid.UU
 		return nil, pkgErrors.NewStructToPayloadConversionError(err, "Category.Create")
 	}
 	args["id"] = id.String()
-	args["user_id"] = user_id.String()
+	args["user_id"] = user_id
 	
 	rows, err := database.QueryInTransaction(ctx,r.executor,
 		func(executor database.Transaction) (schema.CreateCategoryResponse, error) {
@@ -99,7 +99,7 @@ ORDER BY %s
 LIMIT @limit OFFSET @offset
 `
 
-func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *uuid.UUID, payload *schema.GetCategoriesQuery,includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error){
+func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery,includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error){
 	whereClause := make([]string, 0)
 	args, err := database.StructToNamedArgs(payload)
 	if err != nil {
@@ -107,7 +107,7 @@ func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *uuid.
 	}
 	if userID != nil {
 		whereClause = append(whereClause, "user_id = @user_id")
-		args["user_id"] = userID.String()
+		args["user_id"] = userID
 	}
 	if payload.Search != nil {
 		whereClause = append(whereClause, "name ILIKE @search")
@@ -236,12 +236,12 @@ FROM tasker.todo_categories
 WHERE %s
 `
 
-func (r *CategoryRepository) CountCategories(ctx context.Context, userID *uuid.UUID, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
+func (r *CategoryRepository) CountCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
 	whereClause := make([]string, 0)
 	args := pgx.NamedArgs{}
 	if userID != nil {
 		whereClause = append(whereClause, "user_id = @user_id")
-		args["user_id"] = userID.String()
+		args["user_id"] = userID
 	}
 	if payload.Search != nil {
 		whereClause = append(whereClause, "name ILIKE @search")

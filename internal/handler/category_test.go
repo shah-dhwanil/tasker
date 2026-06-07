@@ -24,7 +24,7 @@ type MockCategoryService struct {
 	mock.Mock
 }
 
-func (m *MockCategoryService) CreateCategory(ctx context.Context, userID uuid.UUID, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
+func (m *MockCategoryService) CreateCategory(ctx context.Context, userID string, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
 	args := m.Called(ctx, userID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -32,7 +32,7 @@ func (m *MockCategoryService) CreateCategory(ctx context.Context, userID uuid.UU
 	return args.Get(0).(*schema.CreateCategoryResponse), args.Error(1)
 }
 
-func (m *MockCategoryService) GetCategoryByID(ctx context.Context, userID, categoryID uuid.UUID) (*schema.Category, error) {
+func (m *MockCategoryService) GetCategoryByID(ctx context.Context, userID string, categoryID uuid.UUID) (*schema.Category, error) {
 	args := m.Called(ctx, userID, categoryID)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -40,7 +40,7 @@ func (m *MockCategoryService) GetCategoryByID(ctx context.Context, userID, categ
 	return args.Get(0).(*schema.Category), args.Error(1)
 }
 
-func (m *MockCategoryService) GetAllCategories(ctx context.Context, userID uuid.UUID, query *schema.GetCategoriesQuery) (*schema.PaginatedResponse[schema.GetCategoriesResponse], error) {
+func (m *MockCategoryService) GetAllCategories(ctx context.Context, userID string, query *schema.GetCategoriesQuery) (*schema.PaginatedResponse[schema.GetCategoriesResponse], error) {
 	args := m.Called(ctx, userID, query)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -48,7 +48,7 @@ func (m *MockCategoryService) GetAllCategories(ctx context.Context, userID uuid.
 	return args.Get(0).(*schema.PaginatedResponse[schema.GetCategoriesResponse]), args.Error(1)
 }
 
-func (m *MockCategoryService) UpdateCategory(ctx context.Context, userID, categoryID uuid.UUID, req *schema.UpdateCategoryRequest) (*schema.UpdateCategoryResponse, error) {
+func (m *MockCategoryService) UpdateCategory(ctx context.Context, userID string, categoryID uuid.UUID, req *schema.UpdateCategoryRequest) (*schema.UpdateCategoryResponse, error) {
 	args := m.Called(ctx, userID, categoryID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -56,17 +56,17 @@ func (m *MockCategoryService) UpdateCategory(ctx context.Context, userID, catego
 	return args.Get(0).(*schema.UpdateCategoryResponse), args.Error(1)
 }
 
-func (m *MockCategoryService) DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error {
+func (m *MockCategoryService) DeleteCategory(ctx context.Context, userID string, categoryID uuid.UUID) error {
 	args := m.Called(ctx, userID, categoryID)
 	return args.Error(0)
 }
 
-func authMiddleware(userID uuid.UUID) echo.MiddlewareFunc {
+func authMiddleware(userID string) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			c.Set("user", &clerk.SessionClaims{
 				RegisteredClaims: clerk.RegisteredClaims{
-					Subject: userID.String(),
+					Subject: userID,
 				},
 			})
 			return next(c)
@@ -74,7 +74,7 @@ func authMiddleware(userID uuid.UUID) echo.MiddlewareFunc {
 	}
 }
 
-func setupServer(t *testing.T, mockSvc *MockCategoryService, userID *uuid.UUID) *echo.Echo {
+func setupServer(t *testing.T, mockSvc *MockCategoryService, userID *string) *echo.Echo {
 	t.Helper()
 
 	e := echo.New()
@@ -105,7 +105,7 @@ type categoryTestCase struct {
 	method         string
 	url            string
 	body           string
-	userID         *uuid.UUID
+	userID         *string
 	setupMock      func(*MockCategoryService)
 	expectedStatus int
 	assertResponse func(*testing.T, *httptest.ResponseRecorder)
@@ -142,8 +142,8 @@ func runCategoryTest(t *testing.T, tc categoryTestCase) {
 	mockSvc.AssertExpectations(t)
 }
 
-func ptr(u uuid.UUID) *uuid.UUID {
-	return &u
+func ptr(s string) *string {
+	return &s
 }
 
 func TestCreateCategory(t *testing.T) {
@@ -157,7 +157,7 @@ func TestCreateCategory(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/categories",
 			body:           `{"name":"Work"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusCreated,
 			setupMock: func(m *MockCategoryService) {
 				m.On("CreateCategory", mock.Anything, mock.Anything, mock.Anything).
@@ -176,7 +176,7 @@ func TestCreateCategory(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/categories",
 			body:           `{"name":"Work"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockCategoryService) {
 				m.On("CreateCategory", mock.Anything, mock.Anything, mock.Anything).
@@ -208,7 +208,7 @@ func TestCreateCategory(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/categories",
 			body:           `invalid json`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusBadRequest,
 			assertResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				var errResp schema.ErrorResponse
@@ -236,7 +236,7 @@ func TestGetCategoryByID(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodGet,
 			url:            "/api/v1/categories/" + categoryID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockCategoryService) {
 				m.On("GetCategoryByID", mock.Anything, mock.Anything, mock.Anything).
@@ -254,7 +254,7 @@ func TestGetCategoryByID(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodGet,
 			url:            "/api/v1/categories/" + categoryID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockCategoryService) {
 				m.On("GetCategoryByID", mock.Anything, mock.Anything, mock.Anything).
@@ -285,7 +285,7 @@ func TestGetAllCategories(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodGet,
 			url:            "/api/v1/categories?page=1&limit=10",
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockCategoryService) {
 				m.On("GetAllCategories", mock.Anything, mock.Anything, mock.Anything).
@@ -309,7 +309,7 @@ func TestGetAllCategories(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodGet,
 			url:            "/api/v1/categories?page=1&limit=10",
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockCategoryService) {
 				m.On("GetAllCategories", mock.Anything, mock.Anything, mock.Anything).
@@ -344,7 +344,7 @@ func TestUpdateCategory(t *testing.T) {
 			method:         http.MethodPatch,
 			url:            "/api/v1/categories/" + categoryID.String(),
 			body:           `{"name":"Updated"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockCategoryService) {
 				m.On("UpdateCategory", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -363,7 +363,7 @@ func TestUpdateCategory(t *testing.T) {
 			method:         http.MethodPatch,
 			url:            "/api/v1/categories/" + categoryID.String(),
 			body:           `{"name":"Updated"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockCategoryService) {
 				m.On("UpdateCategory", mock.Anything, mock.Anything, mock.Anything, mock.Anything).
@@ -397,7 +397,7 @@ func TestDeleteCategory(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodDelete,
 			url:            "/api/v1/categories/" + categoryID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusNoContent,
 			setupMock: func(m *MockCategoryService) {
 				m.On("DeleteCategory", mock.Anything, mock.Anything, mock.Anything).Return(nil)
@@ -410,7 +410,7 @@ func TestDeleteCategory(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodDelete,
 			url:            "/api/v1/categories/" + categoryID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockCategoryService) {
 				m.On("DeleteCategory", mock.Anything, mock.Anything, mock.Anything).

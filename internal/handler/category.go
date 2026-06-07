@@ -14,11 +14,11 @@ import (
 )
 
 type categoryService interface {
-	CreateCategory(ctx context.Context, userID uuid.UUID, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error)
-	GetCategoryByID(ctx context.Context, userID, categoryID uuid.UUID) (*schema.Category, error)
-	GetAllCategories(ctx context.Context, userID uuid.UUID, query *schema.GetCategoriesQuery) (*schema.PaginatedResponse[schema.GetCategoriesResponse], error)
-	UpdateCategory(ctx context.Context, userID, categoryID uuid.UUID, req *schema.UpdateCategoryRequest) (*schema.UpdateCategoryResponse, error)
-	DeleteCategory(ctx context.Context, userID, categoryID uuid.UUID) error
+	CreateCategory(ctx context.Context, userID string, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error)
+	GetCategoryByID(ctx context.Context, userID string, categoryID uuid.UUID) (*schema.Category, error)
+	GetAllCategories(ctx context.Context, userID string, query *schema.GetCategoriesQuery) (*schema.PaginatedResponse[schema.GetCategoriesResponse], error)
+	UpdateCategory(ctx context.Context, userID string, categoryID uuid.UUID, req *schema.UpdateCategoryRequest) (*schema.UpdateCategoryResponse, error)
+	DeleteCategory(ctx context.Context, userID string, categoryID uuid.UUID) error
 }
 
 type CategoryHandler struct {
@@ -66,7 +66,7 @@ func (h *CategoryHandler) CreateCategory(c echo.Context, req *schema.CreateCateg
 		return err
 	}
 
-	result, err := h.CategoryService.CreateCategory(c.Request().Context(), userID, req)
+	result, err := h.CategoryService.CreateCategory(c.Request().Context(), *userID, req)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (h *CategoryHandler) GetCategoryByID(c echo.Context, req *CategoryIDRequest
 		return err
 	}
 
-	result, err := h.CategoryService.GetCategoryByID(c.Request().Context(), userID, req.CategoryID)
+	result, err := h.CategoryService.GetCategoryByID(c.Request().Context(), *userID, req.CategoryID)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (h *CategoryHandler) GetAllCategories(c echo.Context, req *schema.GetCatego
 		return err
 	}
 
-	result, err := h.CategoryService.GetAllCategories(c.Request().Context(), userID, req)
+	result, err := h.CategoryService.GetAllCategories(c.Request().Context(), *userID, req)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func (h *CategoryHandler) UpdateCategory(c echo.Context, req *UpdateCategoryRequ
 		return err
 	}
 
-	result, err := h.CategoryService.UpdateCategory(c.Request().Context(), userID, req.CategoryID, req.UpdateCategoryRequest)
+	result, err := h.CategoryService.UpdateCategory(c.Request().Context(), *userID, req.CategoryID, req.UpdateCategoryRequest)
 	if err != nil {
 		return err
 	}
@@ -182,21 +182,17 @@ func (h *CategoryHandler) DeleteCategory(c echo.Context, req *CategoryIDRequest)
 		return err
 	}
 
-	if err := h.CategoryService.DeleteCategory(c.Request().Context(), userID, req.CategoryID); err != nil {
+	if err := h.CategoryService.DeleteCategory(c.Request().Context(), *userID, req.CategoryID); err != nil {
 		return err
 	}
 
 	return c.NoContent(http.StatusNoContent)
 }
 
-func getUserID(c echo.Context) (uuid.UUID, error) {
+func getUserID(c echo.Context) (*string, error) {
 	claims, ok := middleware.GetUserFromContext(c)
 	if !ok {
-		return uuid.Nil, pkgErrors.NewUnauthorizedError(nil, "user not authenticated", nil, nil)
+		return nil, pkgErrors.NewUnauthorizedError(nil, "user not authenticated", nil, nil)
 	}
-	userID, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		return uuid.Nil, pkgErrors.NewUnauthorizedError(err, "invalid user identity", nil, nil)
-	}
-	return userID, nil
+	return &claims.Subject,nil
 }

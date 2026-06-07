@@ -20,7 +20,7 @@ func getCategoryRepository(t *testing.T, repository *repository.Repository, tx d
 	return repository.CategoryRepository.WithExecutor(tx)
 }
 
-func createTestCategory(t *testing.T, ctx context.Context, repo *repository.CategoryRepository, userID uuid.UUID, payload *schema.CreateCategoryRequest) *schema.CreateCategoryResponse {
+func createTestCategory(t *testing.T, ctx context.Context, repo *repository.CategoryRepository, userID string, payload *schema.CreateCategoryRequest) *schema.CreateCategoryResponse {
 	t.Helper()
 	resp, err := repo.CreateCategory(ctx, userID, payload)
 	require.NoError(t, err)
@@ -41,7 +41,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 		{
 			name: "Success",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				desc := "test description"
 				meta := map[string]any{"env": "test"}
 
@@ -74,7 +74,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 
 				resp, err := categoryRepo.CreateCategory(
 					ctx,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "Minimal"},
 				)
 
@@ -89,7 +89,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 		{
 			name: "DuplicateName",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -116,14 +116,14 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 
 				_, err := categoryRepo.CreateCategory(
 					ctx,
-					uuid.New(),
+					"user-a",
 					&schema.CreateCategoryRequest{Name: "Common"},
 				)
 				require.NoError(t, err)
 
 				_, err = categoryRepo.CreateCategory(
 					ctx,
-					uuid.New(),
+					"user-b",
 					&schema.CreateCategoryRequest{Name: "Common"},
 				)
 				require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 		{
 			name: "DuplicateNameAfterSoftDelete",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -162,7 +162,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 
 				resp, err := categoryRepo.CreateCategory(
 					ctx,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "NoDesc"},
 				)
 
@@ -199,7 +199,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 		{
 			name: "Success",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 	
 				categoryRepo := getCategoryRepository(t, repo, tx)
 	
@@ -244,7 +244,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 		{
 			name: "DeletedNotIncluded",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 	
 				categoryRepo := getCategoryRepository(t, repo, tx)
 	
@@ -275,7 +275,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 		{
 			name: "DeletedIncluded",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 	
 				categoryRepo := getCategoryRepository(t, repo, tx)
 	
@@ -315,7 +315,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Hard Delete",
 					},
@@ -369,7 +369,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "DefaultPagination",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id1"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -396,7 +396,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "FilterByUserID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userA, userB := uuid.New(), uuid.New()
+				userA, userB := "user-a", "user-b"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -426,7 +426,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "Search",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id2"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -460,7 +460,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "OrderByName",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id3"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -498,7 +498,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "ExcludeSoftDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id4"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -537,7 +537,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 
 				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
-				nonExistentUser := uuid.New()
+				nonExistentUser := "non-existent-user"
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -553,7 +553,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "CustomPagination",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id5"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -599,7 +599,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "OrderByDescendingName",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id6"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -637,7 +637,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 		{
 			name: "IncludeDeletedRecords",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id7"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -672,11 +672,11 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				createTestCategory(t, ctx, categoryRepo, uuid.New(),
+				createTestCategory(t, ctx, categoryRepo, "user-a",
 					&schema.CreateCategoryRequest{Name: "UserA"},
 				)
 
-				createTestCategory(t, ctx, categoryRepo, uuid.New(),
+				createTestCategory(t, ctx, categoryRepo, "user-b",
 					&schema.CreateCategoryRequest{Name: "UserB"},
 				)
 
@@ -731,7 +731,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "Old"},
 				)
 
@@ -762,7 +762,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "Desc"},
 				)
 
@@ -793,7 +793,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "Meta"},
 				)
 
@@ -823,7 +823,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "Orig"},
 				)
 
@@ -859,7 +859,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{Name: "No Change"},
 				)
 
@@ -905,7 +905,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "To Update Deleted",
 					},
@@ -933,7 +933,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 		{
 			name: "DuplicateName",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -980,7 +980,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Soft Deleted Update",
 					},
@@ -1019,7 +1019,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Clear Desc",
 					},
@@ -1090,7 +1090,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Soft",
 					},
@@ -1127,7 +1127,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Hard",
 					},
@@ -1169,7 +1169,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Default",
 					},
@@ -1198,7 +1198,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id",
 					&schema.CreateCategoryRequest{
 						Name: "Double Soft",
 					},
@@ -1247,7 +1247,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "NoFilters",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id1"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1291,7 +1291,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "FilterByUserID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userA, userB := uuid.New(), uuid.New()
+				userA, userB := "user-a", "user-b"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1335,7 +1335,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "WithSearch",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id2"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1379,7 +1379,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "ExcludeSoftDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id3"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1424,7 +1424,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "IncludeDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id4"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1475,7 +1475,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id5",
 					&schema.CreateCategoryRequest{
 						Name: "UserA",
 					},
@@ -1485,7 +1485,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id5",
 					&schema.CreateCategoryRequest{
 						Name: "UserB",
 					},
@@ -1495,7 +1495,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					t,
 					ctx,
 					categoryRepo,
-					uuid.New(),
+					"test-user-id5",
 					&schema.CreateCategoryRequest{
 						Name: "UserC",
 					},
@@ -1521,7 +1521,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 
 				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
 
-				nonExistentUser := uuid.New()
+				nonExistentUser := "non-existent-user"
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1537,7 +1537,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 		{
 			name: "SearchNoMatch",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id6"
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
