@@ -24,13 +24,13 @@ func getTodoRepository(t *testing.T, repo *repository.Repository, tx database.Tr
 
 
 
-func createTestTodo(t *testing.T, ctx context.Context, todoRepo repository.Todo, categoryRepo *repository.CategoryRepository, userID uuid.UUID, payload *dto.CreateTodoRequest) *dto.Todo {
+func createTestTodo(t *testing.T, ctx context.Context, todoRepo repository.Todo, categoryRepo *repository.CategoryRepository, userID string, payload *dto.CreateTodoRequest) *dto.Todo {
 	t.Helper()
 	cat := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
 		Name: "Test-Cat-" + uuid.New().String()[:8],
 	})
 	payload.CategoryID = &cat.ID
-	payload.UserID = userID.String()
+	payload.UserID = userID
 	resp, err := todoRepo.Create(ctx, payload)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
@@ -50,7 +50,7 @@ func TestTodoRepository_Create(t *testing.T) {
 		{
 			name: "Success",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 				desc := "test description"
@@ -61,7 +61,7 @@ func TestTodoRepository_Create(t *testing.T) {
 				})
 
 				resp, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
-					UserID:      userID.String(),
+					UserID:      userID,
 					CategoryID:  parent.CategoryID,
 					Title:       "My Todo",
 					Description: &desc,
@@ -76,7 +76,7 @@ func TestTodoRepository_Create(t *testing.T) {
 				require.NotNil(t, resp)
 
 				assert.NotZero(t, resp.ID)
-				assert.Equal(t, userID.String(), resp.UserID)
+				assert.Equal(t, userID, resp.UserID)
 				assert.Equal(t, "My Todo", resp.Title)
 				require.NotNil(t, resp.Description)
 				assert.Equal(t, "test description", *resp.Description)
@@ -100,7 +100,7 @@ func TestTodoRepository_Create(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 
 				resp, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
-					UserID:   uuid.New().String(),
+					UserID:   "test-user-id",
 					Title:    "Minimal",
 					Status:   "pending",
 					Priority: 1,
@@ -127,7 +127,7 @@ func TestTodoRepository_Create(t *testing.T) {
 				meta := map[string]any{"key": "value", "count": 42}
 
 				resp, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
-					UserID:   uuid.New().String(),
+					UserID:   "test-user-id",
 					Title:    "Metadata Test",
 					Status:   "in_progress",
 					Priority: 2,
@@ -148,7 +148,7 @@ func TestTodoRepository_Create(t *testing.T) {
 				dueDate := time.Now().Add(48 * time.Hour).Truncate(time.Microsecond)
 
 				resp, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
-					UserID:   uuid.New().String(),
+					UserID:   "test-user-id",
 					Title:    "Due Date Test",
 					Status:   "pending",
 					Priority: 1,
@@ -164,12 +164,12 @@ func TestTodoRepository_Create(t *testing.T) {
 		{
 			name: "InvalidCategory",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				invalidCatID := uuid.New()
 
 				_, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
-					UserID:     userID.String(),
+					UserID:     userID,
 					CategoryID: &invalidCatID,
 					Title:      "Bad Category",
 					Status:     "pending",
@@ -208,7 +208,7 @@ func TestTodoRepository_GetByID(t *testing.T) {
 		{
 			name: "Success",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 				desc := "fetch description"
@@ -222,13 +222,13 @@ func TestTodoRepository_GetByID(t *testing.T) {
 					DueDate:     &dueDate,
 				})
 
-				fetched, err := todoRepo.GetByID(ctx, created.ID, userID.String(), false)
+				fetched, err := todoRepo.GetByID(ctx, created.ID, userID, false)
 
 				require.NoError(t, err)
 				require.NotNil(t, fetched)
 
 				assert.Equal(t, created.ID, fetched.ID)
-				assert.Equal(t, userID.String(), fetched.UserID)
+				assert.Equal(t, userID, fetched.UserID)
 				assert.Equal(t, "Fetch Me", fetched.Title)
 				assert.Equal(t, "completed", fetched.Status)
 				assert.Equal(t, 5, fetched.Priority)
@@ -243,7 +243,7 @@ func TestTodoRepository_GetByID(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				todoRepo := getTodoRepository(t, repo, tx)
 
-				_, err := todoRepo.GetByID(ctx, uuid.New(), uuid.New().String(), false)
+				_, err := todoRepo.GetByID(ctx, uuid.New(), "non-existent-user", false)
 
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
@@ -251,8 +251,8 @@ func TestTodoRepository_GetByID(t *testing.T) {
 		{
 			name: "WrongUser",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				ownerID := uuid.New()
-				otherID := uuid.New()
+				ownerID := "owner-id"
+				otherID := "other-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -260,7 +260,7 @@ func TestTodoRepository_GetByID(t *testing.T) {
 					Title: "Owned Todo", Status: "pending", Priority: 1,
 				})
 
-				_, err := todoRepo.GetByID(ctx, created.ID, otherID.String(), false)
+				_, err := todoRepo.GetByID(ctx, created.ID, otherID, false)
 
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
@@ -268,7 +268,7 @@ func TestTodoRepository_GetByID(t *testing.T) {
 		{
 			name: "DeletedExcluded",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -276,9 +276,9 @@ func TestTodoRepository_GetByID(t *testing.T) {
 					Title: "To Delete", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID))
 
-				_, err := todoRepo.GetByID(ctx, created.ID, userID.String(), false)
+				_, err := todoRepo.GetByID(ctx, created.ID, userID, false)
 
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
@@ -286,7 +286,7 @@ func TestTodoRepository_GetByID(t *testing.T) {
 		{
 			name: "DeletedIncluded",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -294,9 +294,9 @@ func TestTodoRepository_GetByID(t *testing.T) {
 					Title: "To Fetch Deleted", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID))
 
-				fetched, err := todoRepo.GetByID(ctx, created.ID, userID.String(), true)
+				fetched, err := todoRepo.GetByID(ctx, created.ID, userID, true)
 
 				require.NoError(t, err)
 				require.NotNil(t, fetched)
@@ -330,7 +330,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "DefaultPagination",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -344,7 +344,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					Title: "C", Status: "pending", Priority: 1,
 				})
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -356,7 +356,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "FilterByUserID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userA, userB := uuid.New(), uuid.New()
+				userA, userB := "user-a", "user-b"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -367,10 +367,9 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					Title: "B's", Status: "pending", Priority: 1,
 				})
 
-				userAStr := userA.String()
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
-				todos, err := todoRepo.GetAll(ctx, &userAStr, query, true)
+				todos, err := todoRepo.GetAll(ctx, &userA, query, true)
 
 				require.NoError(t, err)
 				require.Len(t, todos, 1)
@@ -380,7 +379,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "FilterByStatus",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -395,7 +394,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 				})
 
 				status := "completed"
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Status: &status}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -409,7 +408,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "FilterByPriority",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -421,7 +420,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 				})
 
 				priority := 5
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Priority: &priority}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -435,7 +434,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "FilterByCategory",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -448,17 +447,17 @@ func TestTodoRepository_GetAll(t *testing.T) {
 
 				_, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
 					Title: "In Cat1", Status: "pending", Priority: 1,
-					UserID: userID.String(), CategoryID: &cat1.ID,
+					UserID: userID, CategoryID: &cat1.ID,
 				})
 				require.NoError(t, err)
 
 				_, err = todoRepo.Create(ctx, &dto.CreateTodoRequest{
 					Title: "In Cat2", Status: "pending", Priority: 1,
-					UserID: userID.String(), CategoryID: &cat2.ID,
+					UserID: userID, CategoryID: &cat2.ID,
 				})
 				require.NoError(t, err)
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, CategoryID: &cat1.ID}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -473,7 +472,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "Search",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -485,7 +484,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 				})
 
 				search := "Shopping"
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Search: &search}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -498,7 +497,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "OrderByTitle",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -512,7 +511,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					Title: "Beta", Status: "pending", Priority: 1,
 				})
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{
 					Offset:  0,
 					Limit:   10,
@@ -531,7 +530,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "ExcludeDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -542,9 +541,9 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					Title: "Deleted", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID))
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, false)
@@ -557,7 +556,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "IncludeDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -568,9 +567,9 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					Title: "Deleted", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID))
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				todos, err := todoRepo.GetAll(ctx, &userIDStr, query, true)
@@ -583,7 +582,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 			name: "NoResults",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				todoRepo := getTodoRepository(t, repo, tx)
-				nonExistentUser := uuid.New().String()
+				nonExistentUser := "non-existent-user"
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				todos, err := todoRepo.GetAll(ctx, &nonExistentUser, query, true)
@@ -595,7 +594,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 		{
 			name: "CustomPagination",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -606,7 +605,7 @@ func TestTodoRepository_GetAll(t *testing.T) {
 					})
 				}
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{
 					Offset:  2,
 					Limit:   2,
@@ -627,10 +626,10 @@ func TestTodoRepository_GetAll(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				createTestTodo(t, ctx, todoRepo, categoryRepo, uuid.New(), &dto.CreateTodoRequest{
+				createTestTodo(t, ctx, todoRepo, categoryRepo, "user-a", &dto.CreateTodoRequest{
 					Title: "UserA", Status: "pending", Priority: 1,
 				})
-				createTestTodo(t, ctx, todoRepo, categoryRepo, uuid.New(), &dto.CreateTodoRequest{
+				createTestTodo(t, ctx, todoRepo, categoryRepo, "user-b", &dto.CreateTodoRequest{
 					Title: "UserB", Status: "pending", Priority: 1,
 				})
 
@@ -668,7 +667,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "NoFilters",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -682,7 +681,7 @@ func TestTodoRepository_Count(t *testing.T) {
 					Title: "C", Status: "pending", Priority: 1,
 				})
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -694,7 +693,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "FilterByUserID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userA, userB := uuid.New(), uuid.New()
+				userA, userB := "user-a", "user-b"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -708,10 +707,9 @@ func TestTodoRepository_Count(t *testing.T) {
 					Title: "B's", Status: "pending", Priority: 1,
 				})
 
-				userAStr := userA.String()
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
-				count, err := todoRepo.Count(ctx, &userAStr, query, false)
+				count, err := todoRepo.Count(ctx, &userA, query, false)
 
 				require.NoError(t, err)
 				assert.Equal(t, 2, count)
@@ -720,7 +718,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "FilterByStatus",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -732,7 +730,7 @@ func TestTodoRepository_Count(t *testing.T) {
 				})
 
 				status := "completed"
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Status: &status}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -744,7 +742,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "FilterByPriority",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -759,7 +757,7 @@ func TestTodoRepository_Count(t *testing.T) {
 				})
 
 				priority := 3
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Priority: &priority}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -771,7 +769,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "FilterByCategory",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -784,21 +782,21 @@ func TestTodoRepository_Count(t *testing.T) {
 
 				_, err := todoRepo.Create(ctx, &dto.CreateTodoRequest{
 					Title: "In Cat1", Status: "pending", Priority: 1,
-					UserID: userID.String(), CategoryID: &cat1.ID,
+					UserID: userID, CategoryID: &cat1.ID,
 				})
 				require.NoError(t, err)
 				_, err = todoRepo.Create(ctx, &dto.CreateTodoRequest{
 					Title: "Also Cat1", Status: "pending", Priority: 1,
-					UserID: userID.String(), CategoryID: &cat1.ID,
+					UserID: userID, CategoryID: &cat1.ID,
 				})
 				require.NoError(t, err)
 				_, err = todoRepo.Create(ctx, &dto.CreateTodoRequest{
 					Title: "In Cat2", Status: "pending", Priority: 1,
-					UserID: userID.String(), CategoryID: &cat2.ID,
+					UserID: userID, CategoryID: &cat2.ID,
 				})
 				require.NoError(t, err)
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, CategoryID: &cat1.ID}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -810,7 +808,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "WithSearch",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -822,7 +820,7 @@ func TestTodoRepository_Count(t *testing.T) {
 				})
 
 				search := "Shopping"
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Search: &search}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -834,7 +832,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "ExcludeDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -844,9 +842,9 @@ func TestTodoRepository_Count(t *testing.T) {
 				deleted := createTestTodo(t, ctx, todoRepo, categoryRepo, userID, &dto.CreateTodoRequest{
 					Title: "Deleted", Status: "pending", Priority: 1,
 				})
-				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID))
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -858,7 +856,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "IncludeDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -868,9 +866,9 @@ func TestTodoRepository_Count(t *testing.T) {
 				deleted := createTestTodo(t, ctx, todoRepo, categoryRepo, userID, &dto.CreateTodoRequest{
 					Title: "Deleted", Status: "pending", Priority: 1,
 				})
-				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, deleted.ID, userID))
 
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, true)
@@ -885,13 +883,13 @@ func TestTodoRepository_Count(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				createTestTodo(t, ctx, todoRepo, categoryRepo, uuid.New(), &dto.CreateTodoRequest{
+				createTestTodo(t, ctx, todoRepo, categoryRepo, "user-a", &dto.CreateTodoRequest{
 					Title: "UserA", Status: "pending", Priority: 1,
 				})
-				createTestTodo(t, ctx, todoRepo, categoryRepo, uuid.New(), &dto.CreateTodoRequest{
+				createTestTodo(t, ctx, todoRepo, categoryRepo, "user-b", &dto.CreateTodoRequest{
 					Title: "UserB", Status: "pending", Priority: 1,
 				})
-				createTestTodo(t, ctx, todoRepo, categoryRepo, uuid.New(), &dto.CreateTodoRequest{
+				createTestTodo(t, ctx, todoRepo, categoryRepo, "user-c", &dto.CreateTodoRequest{
 					Title: "UserC", Status: "pending", Priority: 1,
 				})
 
@@ -907,7 +905,7 @@ func TestTodoRepository_Count(t *testing.T) {
 			name: "NoResults",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				todoRepo := getTodoRepository(t, repo, tx)
-				nonExistentUser := uuid.New().String()
+				nonExistentUser := "non-existent-user"
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10}
 
 				count, err := todoRepo.Count(ctx, &nonExistentUser, query, false)
@@ -919,7 +917,7 @@ func TestTodoRepository_Count(t *testing.T) {
 		{
 			name: "SearchNoMatch",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -931,7 +929,7 @@ func TestTodoRepository_Count(t *testing.T) {
 				})
 
 				search := "nonexistent"
-				userIDStr := userID.String()
+				userIDStr := userID
 				query := &dto.GetTodosQuery{Offset: 0, Limit: 10, Search: &search}
 
 				count, err := todoRepo.Count(ctx, &userIDStr, query, false)
@@ -966,7 +964,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "Title",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -975,8 +973,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 
 				newTitle := "Updated Title"
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID: userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID: userID,
 					Title:  &newTitle,
 				})
 
@@ -989,7 +987,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "Status",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -998,8 +996,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 
 				newStatus := "completed"
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID: userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID: userID,
 					Status: &newStatus,
 				})
 
@@ -1011,7 +1009,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "Priority",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1020,8 +1018,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 
 				newPriority := 5
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					Priority: &newPriority,
 				})
 
@@ -1033,7 +1031,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "Description",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1042,8 +1040,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 
 				newDesc := "Updated Description"
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					Description: &newDesc,
 				})
 
@@ -1056,7 +1054,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "CategoryID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1068,8 +1066,8 @@ func TestTodoRepository_Update(t *testing.T) {
 					Name: "New-Category",
 				})
 
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:     userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:     userID,
 					CategoryID: &newCat.ID,
 				})
 
@@ -1082,7 +1080,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "DueDate",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1092,8 +1090,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				require.Nil(t, created.DueDate)
 
 				dueDate := time.Now().Add(24 * time.Hour).Truncate(time.Microsecond)
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:  userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:  userID,
 					DueDate: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: &dueDate},
 				})
 
@@ -1106,7 +1104,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "CompletedAt",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1116,8 +1114,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				require.Nil(t, created.CompletedAt)
 
 				now := time.Now().Truncate(time.Microsecond)
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					CompletedAt: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: &now},
 				})
 
@@ -1130,7 +1128,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "ParentID",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1142,8 +1140,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 				require.Nil(t, child.ParentID)
 
-				updated, err := todoRepo.Update(ctx, child.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				updated, err := todoRepo.Update(ctx, child.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					ParentID: schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: &parent.ID},
 				})
 
@@ -1156,7 +1154,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "MetadataMerge",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1169,8 +1167,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				require.NotNil(t, created.Metadata)
 
 				meta := map[string]any{"additional": "value2"}
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					Metadata: &meta,
 				})
 
@@ -1183,7 +1181,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "AllFields",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1205,8 +1203,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				now := time.Now().Truncate(time.Microsecond)
 				meta := map[string]any{"key": "val"}
 
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					Title:       &newTitle,
 					Description: &newDesc,
 					Status:      &newStatus,
@@ -1240,7 +1238,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "NoChanges",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1248,8 +1246,8 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "No Change", Status: "pending", Priority: 1,
 				})
 
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID: userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID: userID,
 				})
 
 				require.NoError(t, err)
@@ -1264,8 +1262,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 				newTitle := "Should Fail"
 
-				_, err := todoRepo.Update(ctx, uuid.New(), uuid.New().String(), &dto.UpdateTodoRequest{
-					UserID: uuid.New().String(),
+				_, err := todoRepo.Update(ctx, uuid.New(), "non-existent-user", &dto.UpdateTodoRequest{
+					UserID: "non-existent-user",
 					Title:  &newTitle,
 				})
 
@@ -1275,7 +1273,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "SoftDeleted",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1283,11 +1281,11 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "To Update Deleted", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID))
 
 				newTitle := "New Name"
-				_, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID: userID.String(),
+				_, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID: userID,
 					Title:  &newTitle,
 				})
 
@@ -1297,7 +1295,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "SetDueDateToNull",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1308,8 +1306,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 				require.NotNil(t, created.DueDate)
 
-				updated, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:  userID.String(),
+				updated, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:  userID,
 					DueDate: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: nil},
 				})
 
@@ -1320,7 +1318,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "SetCompletedAtToNull",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1330,15 +1328,15 @@ func TestTodoRepository_Update(t *testing.T) {
 				require.Nil(t, created.CompletedAt)
 
 				now := time.Now().Truncate(time.Microsecond)
-				withCompleted, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				withCompleted, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					CompletedAt: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: &now},
 				})
 				require.NoError(t, err)
 				require.NotNil(t, withCompleted.CompletedAt)
 
-				cleared, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				cleared, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					CompletedAt: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: nil},
 				})
 
@@ -1349,7 +1347,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "SetParentIDToNull",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1360,15 +1358,15 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "Child With Parent", Status: "pending", Priority: 1,
 				})
 
-				withParent, err := todoRepo.Update(ctx, child.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				withParent, err := todoRepo.Update(ctx, child.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					ParentID: schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: &parent.ID},
 				})
 				require.NoError(t, err)
 				require.NotNil(t, withParent.ParentID)
 
-				cleared, err := todoRepo.Update(ctx, child.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				cleared, err := todoRepo.Update(ctx, child.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					ParentID: schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: nil},
 				})
 
@@ -1379,7 +1377,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "ClearAllNullableToNull",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1392,8 +1390,8 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "Child With All", Status: "pending", Priority: 1,
 				})
 
-				withAll, err := todoRepo.Update(ctx, child.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				withAll, err := todoRepo.Update(ctx, child.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					DueDate:     schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: &dueDate},
 					CompletedAt: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: &dueDate},
 					ParentID:    schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: &parent.ID},
@@ -1403,8 +1401,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				require.NotNil(t, withAll.CompletedAt)
 				require.NotNil(t, withAll.ParentID)
 
-				cleared, err := todoRepo.Update(ctx, child.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:      userID.String(),
+				cleared, err := todoRepo.Update(ctx, child.ID, userID, &dto.UpdateTodoRequest{
+					UserID:      userID,
 					DueDate:     schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: nil},
 					CompletedAt: schema.Nullable[*time.Time]{IsExplicitlySet: true, Data: nil},
 					ParentID:    schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: nil},
@@ -1419,7 +1417,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "SelfParentError",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1427,8 +1425,8 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "Self Parent", Status: "pending", Priority: 1,
 				})
 
-				_, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				_, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					ParentID: schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: &created.ID},
 				})
 
@@ -1441,7 +1439,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "InvalidParentError",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1450,8 +1448,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 				invalidID := uuid.New()
 
-				_, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:   userID.String(),
+				_, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:   userID,
 					ParentID: schema.Nullable[*uuid.UUID]{IsExplicitlySet: true, Data: &invalidID},
 				})
 
@@ -1464,7 +1462,7 @@ func TestTodoRepository_Update(t *testing.T) {
 		{
 			name: "InvalidCategoryError",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1473,8 +1471,8 @@ func TestTodoRepository_Update(t *testing.T) {
 				})
 				invalidCatID := uuid.New()
 
-				_, err := todoRepo.Update(ctx, created.ID, userID.String(), &dto.UpdateTodoRequest{
-					UserID:     userID.String(),
+				_, err := todoRepo.Update(ctx, created.ID, userID, &dto.UpdateTodoRequest{
+					UserID:     userID,
 					CategoryID: &invalidCatID,
 				})
 
@@ -1510,7 +1508,7 @@ func TestTodoRepository_Delete(t *testing.T) {
 		{
 			name: "SoftDelete",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1518,12 +1516,12 @@ func TestTodoRepository_Delete(t *testing.T) {
 					Title: "Soft", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID))
 
-				_, err := todoRepo.GetByID(ctx, created.ID, userID.String(), false)
+				_, err := todoRepo.GetByID(ctx, created.ID, userID, false)
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 
-				fetched, err := todoRepo.GetByID(ctx, created.ID, userID.String(), true)
+				fetched, err := todoRepo.GetByID(ctx, created.ID, userID, true)
 				require.NoError(t, err)
 				assert.True(t, fetched.IsDeleted)
 			},
@@ -1533,15 +1531,15 @@ func TestTodoRepository_Delete(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				todoRepo := getTodoRepository(t, repo, tx)
 
-				err := todoRepo.Delete(ctx, uuid.New(), uuid.New().String())
+				err := todoRepo.Delete(ctx, uuid.New(), "non-existent-user")
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
 		},
 		{
 			name: "WrongUser",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				ownerID := uuid.New()
-				otherID := uuid.New()
+				ownerID := "owner-id"
+				otherID := "other-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1549,14 +1547,14 @@ func TestTodoRepository_Delete(t *testing.T) {
 					Title: "Wrong User Delete", Status: "pending", Priority: 1,
 				})
 
-				err := todoRepo.Delete(ctx, created.ID, otherID.String())
+				err := todoRepo.Delete(ctx, created.ID, otherID)
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
 		},
 		{
 			name: "DoubleSoftDelete",
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
-				userID := uuid.New()
+				userID := "test-user-id"
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
@@ -1564,9 +1562,9 @@ func TestTodoRepository_Delete(t *testing.T) {
 					Title: "Double Soft", Status: "pending", Priority: 1,
 				})
 
-				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID.String()))
+				require.NoError(t, todoRepo.Delete(ctx, created.ID, userID))
 
-				err := todoRepo.Delete(ctx, created.ID, userID.String())
+				err := todoRepo.Delete(ctx, created.ID, userID)
 				assertAppErrorType(t, err, errors.ResourceNotFound)
 			},
 		},

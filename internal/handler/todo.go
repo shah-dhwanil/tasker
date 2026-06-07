@@ -63,7 +63,7 @@ func (h *TodoHandler) Create(c echo.Context, req *schema.CreateTodoRequest) erro
 		return err
 	}
 
-	result, err := h.TodoService.Create(c.Request().Context(), userID.String(), req)
+	result, err := h.TodoService.Create(c.Request().Context(), *userID, req)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func (h *TodoHandler) GetByID(c echo.Context, req *TodoIDRequest) error {
 		return err
 	}
 
-	result, err := h.TodoService.GetByID(c.Request().Context(), req.TodoID, userID.String(), false)
+	result, err := h.TodoService.GetByID(c.Request().Context(), req.TodoID, *userID, false)
 	if err != nil {
 		return err
 	}
@@ -127,7 +127,7 @@ func (h *TodoHandler) GetAll(c echo.Context, req *schema.GetTodosQuery) error {
 		return err
 	}
 
-	result, err := h.TodoService.GetAll(c.Request().Context(), userID.String(), req)
+	result, err := h.TodoService.GetAll(c.Request().Context(), *userID, req)
 	if err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func (h *TodoHandler) Update(c echo.Context, req *UpdateTodoRequest) error {
 		return err
 	}
 
-	result, err := h.TodoService.Update(c.Request().Context(), req.TodoID, userID.String(), req.UpdateTodoRequest)
+	result, err := h.TodoService.Update(c.Request().Context(), req.TodoID, *userID, req.UpdateTodoRequest)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (h *TodoHandler) Delete(c echo.Context, req *TodoIDRequest) error {
 		return err
 	}
 
-	if err := h.TodoService.Delete(c.Request().Context(), req.TodoID, userID.String()); err != nil {
+	if err := h.TodoService.Delete(c.Request().Context(), req.TodoID, *userID); err != nil {
 		return err
 	}
 

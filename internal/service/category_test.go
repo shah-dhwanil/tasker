@@ -17,7 +17,7 @@ type MockCategoryRepository struct {
 	mock.Mock
 }
 
-func (m *MockCategoryRepository) CreateCategory(ctx context.Context, userID uuid.UUID, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
+func (m *MockCategoryRepository) CreateCategory(ctx context.Context, userID string, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
 	args := m.Called(ctx, userID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -33,7 +33,7 @@ func (m *MockCategoryRepository) GetCategoryByID(ctx context.Context, categoryID
 	return args.Get(0).(*schema.Category), args.Error(1)
 }
 
-func (m *MockCategoryRepository) GetAllCategories(ctx context.Context, userID *uuid.UUID, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error) {
+func (m *MockCategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error) {
 	args := m.Called(ctx, userID, payload, includeDeletedRecords)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -41,7 +41,7 @@ func (m *MockCategoryRepository) GetAllCategories(ctx context.Context, userID *u
 	return args.Get(0).([]schema.GetCategoriesResponse), args.Error(1)
 }
 
-func (m *MockCategoryRepository) CountCategories(ctx context.Context, userID *uuid.UUID, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
+func (m *MockCategoryRepository) CountCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
 	args := m.Called(ctx, userID, payload, includeDeletedRecords)
 	return args.Int(0), args.Error(1)
 }
@@ -63,7 +63,7 @@ func TestCategoryService_CreateCategory_Success(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	req := &schema.CreateCategoryRequest{Name: "Work"}
 	expected := &schema.CreateCategoryResponse{
 		ID:   uuid.New(),
@@ -84,7 +84,7 @@ func TestCategoryService_CreateCategory_RepoError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	req := &schema.CreateCategoryRequest{Name: "Work"}
 	expectedErr := assert.AnError
 
@@ -101,7 +101,7 @@ func TestCategoryService_GetCategoryByID_Success(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	expected := &schema.Category{
 		ID:     categoryID,
@@ -124,9 +124,9 @@ func TestCategoryService_GetCategoryByID_OwnershipViolation(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
-	otherUserID := uuid.New()
+	otherUserID := "other-user-id"
 	fetched := &schema.Category{
 		ID:     categoryID,
 		UserID: otherUserID,
@@ -146,7 +146,7 @@ func TestCategoryService_GetCategoryByID_RepoError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	expectedErr := assert.AnError
 
@@ -163,7 +163,7 @@ func TestCategoryService_GetAllCategories_Success(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	page := 1
 	limit := 10
 	query := &schema.GetCategoriesQuery{Page: &page, Limit: &limit}
@@ -173,10 +173,10 @@ func TestCategoryService_GetAllCategories_Success(t *testing.T) {
 		{ID: uuid.New(), Name: "Personal"},
 	}
 
-	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(expectedCategories, nil)
-	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(2, nil)
 
@@ -195,7 +195,7 @@ func TestCategoryService_GetAllCategories_TotalPagesCeiling(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	page := 1
 	limit := 10
 	query := &schema.GetCategoriesQuery{Page: &page, Limit: &limit}
@@ -205,10 +205,10 @@ func TestCategoryService_GetAllCategories_TotalPagesCeiling(t *testing.T) {
 		categories[i] = schema.GetCategoriesResponse{ID: uuid.New(), Name: "Category"}
 	}
 
-	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(categories, nil)
-	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(15, nil)
 
@@ -222,16 +222,16 @@ func TestCategoryService_GetAllCategories_ZeroTotal(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	page := 1
 	limit := 10
 	query := &schema.GetCategoriesQuery{Page: &page, Limit: &limit}
 	query.Normalize()
 
-	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return([]schema.GetCategoriesResponse{}, nil)
-	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(0, nil)
 
@@ -247,14 +247,14 @@ func TestCategoryService_GetAllCategories_RepoErrorOnGetAll(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	page := 1
 	limit := 10
 	query := &schema.GetCategoriesQuery{Page: &page, Limit: &limit}
 	query.Normalize()
 	expectedErr := assert.AnError
 
-	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(nil, expectedErr)
 
@@ -269,19 +269,19 @@ func TestCategoryService_GetAllCategories_RepoErrorOnCount(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	page := 1
 	limit := 10
 	query := &schema.GetCategoriesQuery{Page: &page, Limit: &limit}
 	query.Normalize()
 	expectedErr := assert.AnError
 
-	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return([]schema.GetCategoriesResponse{
 		{ID: uuid.New(), Name: "Work"},
 	}, nil)
-	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *uuid.UUID) bool {
+	mockRepo.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 		return u != nil && *u == userID
 	}), query, false).Return(0, expectedErr)
 
@@ -296,7 +296,7 @@ func TestCategoryService_UpdateCategory_Success(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	newName := "Updated"
 	req := &schema.UpdateCategoryRequest{Name: &newName}
@@ -325,9 +325,9 @@ func TestCategoryService_UpdateCategory_OwnershipViolation(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
-	otherUserID := uuid.New()
+	otherUserID := "other-user-id"
 	newName := "Updated"
 	req := &schema.UpdateCategoryRequest{Name: &newName}
 	fetched := &schema.Category{
@@ -349,7 +349,7 @@ func TestCategoryService_UpdateCategory_GetByIDError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	newName := "Updated"
 	req := &schema.UpdateCategoryRequest{Name: &newName}
@@ -368,7 +368,7 @@ func TestCategoryService_UpdateCategory_UpdateError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	newName := "Updated"
 	req := &schema.UpdateCategoryRequest{Name: &newName}
@@ -393,7 +393,7 @@ func TestCategoryService_DeleteCategory_Success(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	fetched := &schema.Category{
 		ID:     categoryID,
@@ -413,9 +413,9 @@ func TestCategoryService_DeleteCategory_OwnershipViolation(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
-	otherUserID := uuid.New()
+	otherUserID := "other-user-id"
 	fetched := &schema.Category{
 		ID:     categoryID,
 		UserID: otherUserID,
@@ -434,7 +434,7 @@ func TestCategoryService_DeleteCategory_GetByIDError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	expectedErr := assert.AnError
 
@@ -450,7 +450,7 @@ func TestCategoryService_DeleteCategory_DeleteError(t *testing.T) {
 	mockRepo := new(MockCategoryRepository)
 	svc := service.NewCategoryService(mockRepo)
 	ctx := context.Background()
-	userID := uuid.New()
+	userID := "test-user-id"
 	categoryID := uuid.New()
 	fetched := &schema.Category{
 		ID:     categoryID,

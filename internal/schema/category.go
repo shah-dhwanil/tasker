@@ -10,7 +10,7 @@ import (
 type Category struct {
 	ID          uuid.UUID `db:"id"`
 	Name        string    `db:"name"`
-	UserID      uuid.UUID `db:"user_id"`
+	UserID      string `db:"user_id"`
 	Description *string    `db:"description"`
 	Metadata    map[string]any    `db:"metadata"`
 	CreatedAt   time.Time     `db:"created_at"`

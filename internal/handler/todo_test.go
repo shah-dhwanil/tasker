@@ -60,7 +60,7 @@ func (m *MockTodoService) Delete(ctx context.Context, todoID uuid.UUID, userID s
 	return args.Error(0)
 }
 
-func setupTodoServer(t *testing.T, mockSvc *MockTodoService, userID *uuid.UUID) *echo.Echo {
+func setupTodoServer(t *testing.T, mockSvc *MockTodoService, userID *string) *echo.Echo {
 	t.Helper()
 
 	e := echo.New()
@@ -91,7 +91,7 @@ type todoTestCase struct {
 	method         string
 	url            string
 	body           string
-	userID         *uuid.UUID
+	userID         *string
 	setupMock      func(*MockTodoService)
 	expectedStatus int
 	assertResponse func(*testing.T, *httptest.ResponseRecorder)
@@ -139,7 +139,7 @@ func TestCreateTodo(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/todos",
 			body:           `{"title":"Test Todo","status":"pending","priority":3}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusCreated,
 			setupMock: func(m *MockTodoService) {
 				m.On("Create", mock.Anything, mock.Anything, mock.Anything).
@@ -159,7 +159,7 @@ func TestCreateTodo(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/todos",
 			body:           `{"title":"Test Todo","status":"pending","priority":3}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockTodoService) {
 				m.On("Create", mock.Anything, mock.Anything, mock.Anything).
@@ -191,7 +191,7 @@ func TestCreateTodo(t *testing.T) {
 			method:         http.MethodPost,
 			url:            "/api/v1/todos",
 			body:           `invalid json`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusBadRequest,
 			assertResponse: func(t *testing.T, rec *httptest.ResponseRecorder) {
 				var errResp schema.ErrorResponse
@@ -219,7 +219,7 @@ func TestGetTodoByID(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodGet,
 			url:            "/api/v1/todos/" + todoID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockTodoService) {
 				m.On("GetByID", mock.Anything, todoID, mock.Anything, false).
@@ -237,7 +237,7 @@ func TestGetTodoByID(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodGet,
 			url:            "/api/v1/todos/" + todoID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockTodoService) {
 				m.On("GetByID", mock.Anything, todoID, mock.Anything, false).
@@ -270,7 +270,7 @@ func TestGetAllTodos(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodGet,
 			url:            "/api/v1/todos?page=1&limit=10",
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockTodoService) {
 				m.On("GetAll", mock.Anything, mock.Anything, mock.Anything).
@@ -293,8 +293,8 @@ func TestGetAllTodos(t *testing.T) {
 		{
 			name:           "WithParentID",
 			method:         http.MethodGet,
-			url:            "/api/v1/todos?parent_id=" + parentID.String(),
-			userID:         ptr(uuid.New()),
+			url:            "/api/v1/todos?parentid=" + parentID.String(),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockTodoService) {
 				m.On("GetAll", mock.Anything, mock.Anything, mock.MatchedBy(func(q *schema.GetTodosQuery) bool {
@@ -318,7 +318,7 @@ func TestGetAllTodos(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodGet,
 			url:            "/api/v1/todos?page=1&limit=10",
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockTodoService) {
 				m.On("GetAll", mock.Anything, mock.Anything, mock.Anything).
@@ -352,7 +352,7 @@ func TestUpdateTodo(t *testing.T) {
 			method:         http.MethodPatch,
 			url:            "/api/v1/todos/" + todoID.String(),
 			body:           `{"title":"Updated Todo"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusOK,
 			setupMock: func(m *MockTodoService) {
 				m.On("Update", mock.Anything, todoID, mock.Anything, mock.Anything).
@@ -371,7 +371,7 @@ func TestUpdateTodo(t *testing.T) {
 			method:         http.MethodPatch,
 			url:            "/api/v1/todos/" + todoID.String(),
 			body:           `{"title":"Updated Todo"}`,
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockTodoService) {
 				m.On("Update", mock.Anything, todoID, mock.Anything, mock.Anything).
@@ -405,7 +405,7 @@ func TestDeleteTodo(t *testing.T) {
 			name:           "Success",
 			method:         http.MethodDelete,
 			url:            "/api/v1/todos/" + todoID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusNoContent,
 			setupMock: func(m *MockTodoService) {
 				m.On("Delete", mock.Anything, todoID, mock.Anything).Return(nil)
@@ -418,7 +418,7 @@ func TestDeleteTodo(t *testing.T) {
 			name:           "ServiceError",
 			method:         http.MethodDelete,
 			url:            "/api/v1/todos/" + todoID.String(),
-			userID:         ptr(uuid.New()),
+			userID:         ptr("test-user-id"),
 			expectedStatus: http.StatusInternalServerError,
 			setupMock: func(m *MockTodoService) {
 				m.On("Delete", mock.Anything, todoID, mock.Anything).
