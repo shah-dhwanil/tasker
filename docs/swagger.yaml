@@ -1,9 +1,27 @@
+basePath: /api/v1
 definitions:
   github_com_shah-dhwanil_tasker_internal_schema.PaginatedResponse-schema_GetCategoriesResponse:
     properties:
       data:
         items:
           $ref: '#/definitions/schema.GetCategoriesResponse'
+        type: array
+      limit:
+        type: integer
+      page:
+        type: integer
+      statusCode:
+        type: integer
+      total:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  github_com_shah-dhwanil_tasker_internal_schema.PaginatedResponse-schema_TodoListItems:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/schema.TodoListItems'
         type: array
       limit:
         type: integer
@@ -27,6 +45,13 @@ definitions:
     properties:
       data:
         $ref: '#/definitions/schema.CreateCategoryResponse'
+      statusCode:
+        type: integer
+    type: object
+  github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Todo:
+    properties:
+      data:
+        $ref: '#/definitions/schema.Todo'
       statusCode:
         type: integer
     type: object
@@ -85,6 +110,39 @@ definitions:
       updated_at:
         type: string
     type: object
+  schema.CreateTodoRequest:
+    properties:
+      categoryId:
+        type: string
+      description:
+        type: string
+      dueDate:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      parentId:
+        type: string
+      priority:
+        maximum: 5
+        minimum: 1
+        type: integer
+      status:
+        enum:
+        - draft
+        - pending
+        - in_progress
+        - completed
+        - archived
+        type: string
+      title:
+        maxLength: 255
+        type: string
+    required:
+    - priority
+    - status
+    - title
+    type: object
   schema.ErrorResponse:
     properties:
       detail:
@@ -120,6 +178,71 @@ definitions:
       name:
         type: string
     type: object
+  schema.Todo:
+    properties:
+      categoryId:
+        type: string
+      children:
+        items:
+          $ref: '#/definitions/schema.TodoListItems'
+        type: array
+      completedAt:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      dueDate:
+        type: string
+      id:
+        type: string
+      isDeleted:
+        type: boolean
+      metadata:
+        additionalProperties: {}
+        type: object
+      parentId:
+        type: string
+      priority:
+        type: integer
+      status:
+        $ref: '#/definitions/schema.TodoStatus'
+      title:
+        type: string
+      updatedAt:
+        type: string
+      userId:
+        type: string
+    type: object
+  schema.TodoListItems:
+    properties:
+      categoryId:
+        type: string
+      dueDate:
+        type: string
+      id:
+        type: string
+      priority:
+        type: integer
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  schema.TodoStatus:
+    enum:
+    - draft
+    - pending
+    - in_progress
+    - completed
+    - archived
+    type: string
+    x-enum-varnames:
+    - TodoStatusDraft
+    - TodoStatusPending
+    - TodoStatusInProgress
+    - TodoStatusCompleted
+    - TodoStatusArchived
   schema.UpdateCategoryRequest:
     properties:
       description:
@@ -148,8 +271,43 @@ definitions:
       updated_at:
         type: string
     type: object
+  schema.UpdateTodoRequest:
+    properties:
+      categoryId:
+        type: string
+      completedAt:
+        type: string
+      description:
+        type: string
+      dueDate:
+        type: string
+      metadata:
+        additionalProperties: {}
+        type: object
+      parentId:
+        type: string
+      priority:
+        maximum: 5
+        minimum: 1
+        type: integer
+      status:
+        enum:
+        - draft
+        - pending
+        - in_progress
+        - completed
+        - archived
+        type: string
+      title:
+        maxLength: 255
+        type: string
+    type: object
+host: localhost:8000
 info:
   contact: {}
+  description: Task management API
+  title: Tasker API
+  version: "1.0"
 paths:
   /categories:
     get:
@@ -345,4 +503,223 @@ paths:
       summary: Update a category
       tags:
       - categories
+  /todos:
+    get:
+      consumes:
+      - application/json
+      description: Get all todos for the authenticated user with pagination, search,
+        filtering, and sorting
+      parameters:
+      - description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      - description: Search term
+        in: query
+        maxLength: 32
+        name: search
+        type: string
+      - description: Filter by status
+        enum:
+        - draft
+        - pending
+        - in_progress
+        - completed
+        - archived
+        in: query
+        name: status
+        type: string
+      - description: Filter by priority
+        in: query
+        maximum: 5
+        minimum: 1
+        name: priority
+        type: integer
+      - description: Filter by category ID
+        in: query
+        name: category_id
+        type: string
+      - description: Filter by parent ID
+        in: query
+        name: parent_id
+        type: string
+      - collectionFormat: csv
+        description: Order by fields
+        in: query
+        items:
+          type: string
+        name: order_by
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.PaginatedResponse-schema_TodoListItems'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all todos
+      tags:
+      - todos
+    post:
+      consumes:
+      - application/json
+      description: Create a new todo for the authenticated user
+      parameters:
+      - description: Todo details
+        in: body
+        name: todo
+        required: true
+        schema:
+          $ref: '#/definitions/schema.CreateTodoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Todo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new todo
+      tags:
+      - todos
+  /todos/{todoId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete an existing todo for the authenticated user
+      parameters:
+      - description: Todo ID
+        in: path
+        name: todoId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a todo
+      tags:
+      - todos
+    get:
+      consumes:
+      - application/json
+      description: Get a single todo for the authenticated user by its ID
+      parameters:
+      - description: Todo ID
+        in: path
+        name: todoId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Todo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a todo by ID
+      tags:
+      - todos
+    patch:
+      consumes:
+      - application/json
+      description: Update an existing todo for the authenticated user
+      parameters:
+      - description: Todo ID
+        in: path
+        name: todoId
+        required: true
+        type: string
+      - description: Todo update details
+        in: body
+        name: todo
+        required: true
+        schema:
+          $ref: '#/definitions/schema.UpdateTodoRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_shah-dhwanil_tasker_internal_schema.Response-schema_Todo'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/schema.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a todo
+      tags:
+      - todos
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

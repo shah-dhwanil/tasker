@@ -9,4 +9,5 @@ import (
 func RegisterRoutes(server *echo.Echo, handler *handler.Handler) {
 	RegisterHealthRoutes(server, handler)
 	RegisterCategoryRoutes(server, handler)
+	RegisterTodoRoutes(server, handler)
 }

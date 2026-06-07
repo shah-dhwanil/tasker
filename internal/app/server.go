@@ -37,8 +37,8 @@ func NewServer(services *Services) *Server {
 		c.JSON(res.StatusCode,res)
 	}
 	middleware.Setup(server, services.Config(),services.Observability())
-	server.GET("/swagger/*", echoSwagger.WrapHandler)
-	handlers := handler.New(service.New(repository.New(services.db)))
+	server.GET("/swagger/*", echoSwagger.WrapHandlerV3)
+	handlers := handler.New(service.New(repository.New(services.db), services.db))
 	routes.RegisterRoutes(server,handlers)
 	return &Server{
 		httpServer: server,
