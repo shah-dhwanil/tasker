@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/shah-dhwanil/tasker/internal/errors"
+	"github.com/shah-dhwanil/tasker/internal/schema"
 )
 
 // StructToNamedArgs maps an arbitrary struct to pgx.NamedArgs.
@@ -77,6 +78,13 @@ func StructToNamedArgs(s any) (pgx.NamedArgs, error) {
 
 		// 3. Check for zero value if omitempty is set
 		if isOmitEmpty {
+			if optional, ok := fieldV.Interface().(schema.NullableField); ok {
+			    if !optional.IsSet() {
+			        continue
+			    }
+			    args[columnName] = optional.Value()
+			    continue
+			}
 			// reflect.Value.IsZero() is the canonical way to check for a zero value in Go 1.13+
 			if fieldV.IsZero() {
 				continue // Skip the field if it's zero value and omitempty is present

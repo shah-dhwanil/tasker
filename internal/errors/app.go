@@ -23,7 +23,7 @@ type AppError struct {
 }
 
 func (e *AppError) Error() string {
-	return fmt.Sprintf("%s [%s]: %s",e.Type, e.Title, e.Message)
+	return fmt.Sprintf("%s [%s]: %s - %s",e.Type, e.Title, e.Message,e.wrappedError.Error())
 }
 
 func (e *AppError) Unwrap() error {
