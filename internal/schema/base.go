@@ -3,7 +3,24 @@ package schema
 import (
 	"bytes"
 	"encoding/json"
+	"reflect"
+
+	"github.com/shah-dhwanil/tasker/internal/validation"
 )
+
+func init() {
+    validation.RegisterCustomTypeFunc(
+        func(field reflect.Value) any {
+            n, ok := field.Interface().(Nullable[any])
+            if !ok || !n.IsExplicitlySet {
+                return nil
+            }
+
+            return n.Data
+        },
+        Nullable[any]{},
+    )
+}
 
 type NullableField interface {
     IsSet() bool

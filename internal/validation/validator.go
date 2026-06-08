@@ -26,3 +26,7 @@ func Validate(payload Validable)error{
 		return err
 	}
 }
+
+func RegisterCustomTypeFunc(fn validator.CustomTypeFunc,types ...any) {
+	validatorClient.RegisterCustomTypeFunc(fn,types...)
+}
