@@ -14,6 +14,16 @@ import (
 	"go.uber.org/zap"
 )
 
+type Category interface {
+	CreateCategory(ctx context.Context, userID string, req *dto.CreateCategoryRequest) (*dto.Category, error)
+	GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*dto.Category, error)
+	GetAllCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) ([]dto.CategoriesListItems, error)
+	CountCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) (int, error)
+	UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *dto.UpdateCategoryRequest, considerDeletedRecords bool) (*dto.Category, error)
+	DeleteCategory(ctx context.Context, categoryID uuid.UUID, isHardDelete *bool) error
+}
+
+
 type CategoryRepository struct {
 	executor database.DBTX
 }
@@ -24,7 +34,7 @@ func newCategoryRepository(executor database.DBTX) *CategoryRepository {
 	}
 }
 
-func(r *CategoryRepository) WithExecutor(executor database.DBTX) *CategoryRepository {
+func(r *CategoryRepository) WithExecutor(executor database.DBTX) Category {
 	return &CategoryRepository{
 		executor: executor,
 	}

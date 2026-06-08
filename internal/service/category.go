@@ -7,25 +7,17 @@ import (
 	"github.com/google/uuid"
 	"github.com/shah-dhwanil/tasker/internal/errors"
 	"github.com/shah-dhwanil/tasker/internal/observability"
+	"github.com/shah-dhwanil/tasker/internal/repository"
 	"github.com/shah-dhwanil/tasker/internal/schema"
 	"github.com/shah-dhwanil/tasker/internal/schema/dto"
 	"go.uber.org/zap"
 )
 
-type CategoryRepository interface {
-	CreateCategory(ctx context.Context, userID string, req *dto.CreateCategoryRequest) (*dto.Category, error)
-	GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*dto.Category, error)
-	GetAllCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) ([]dto.CategoriesListItems, error)
-	CountCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) (int, error)
-	UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *dto.UpdateCategoryRequest, considerDeletedRecords bool) (*dto.Category, error)
-	DeleteCategory(ctx context.Context, categoryID uuid.UUID, isHardDelete *bool) error
-}
-
 type CategoryService struct {
-	repo CategoryRepository
+	repo repository.Category
 }
 
-func NewCategoryService(repo CategoryRepository) *CategoryService {
+func NewCategoryService(repo repository.Category) *CategoryService {
 	return &CategoryService{repo: repo}
 }
 

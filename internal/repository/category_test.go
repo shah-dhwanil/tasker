@@ -16,12 +16,12 @@ import (
 	pkgTesting "github.com/shah-dhwanil/tasker/internal/testing"
 )
 
-func getCategoryRepository(t *testing.T, repository *repository.Repository, tx database.Transaction) *repository.CategoryRepository {
+func getCategoryRepository(t *testing.T, repository *repository.Repository, tx database.Transaction) repository.Category {
 	t.Helper()
 	return repository.CategoryRepository.WithExecutor(tx)
 }
 
-func createTestCategory(t *testing.T, ctx context.Context, repo *repository.CategoryRepository, userID string, payload *dto.CreateCategoryRequest) *dto.Category {
+func createTestCategory(t *testing.T, ctx context.Context, repo repository.Category, userID string, payload *dto.CreateCategoryRequest) *dto.Category {
 	t.Helper()
 	resp, err := repo.CreateCategory(ctx, userID, payload)
 	require.NoError(t, err)

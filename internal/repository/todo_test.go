@@ -24,7 +24,7 @@ func getTodoRepository(t *testing.T, repo *repository.Repository, tx database.Tr
 
 
 
-func createTestTodo(t *testing.T, ctx context.Context, todoRepo repository.Todo, categoryRepo *repository.CategoryRepository, userID string, payload *dto.CreateTodoRequest) *dto.Todo {
+func createTestTodo(t *testing.T, ctx context.Context, todoRepo repository.Todo, categoryRepo repository.Category, userID string, payload *dto.CreateTodoRequest) *dto.Todo {
 	t.Helper()
 	cat := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 		Name: "Test-Cat-" + uuid.New().String()[:8],
