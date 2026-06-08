@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/shah-dhwanil/tasker/internal/schema"
+	"github.com/shah-dhwanil/tasker/internal/schema/dto"
 	"github.com/shah-dhwanil/tasker/internal/service"
 )
 
@@ -17,41 +18,41 @@ type MockCategoryRepository struct {
 	mock.Mock
 }
 
-func (m *MockCategoryRepository) CreateCategory(ctx context.Context, userID string, req *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
+func (m *MockCategoryRepository) CreateCategory(ctx context.Context, userID string, req *dto.CreateCategoryRequest) (*dto.Category, error) {
 	args := m.Called(ctx, userID, req)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*schema.CreateCategoryResponse), args.Error(1)
+	return args.Get(0).(*dto.Category), args.Error(1)
 }
 
-func (m *MockCategoryRepository) GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*schema.Category, error) {
+func (m *MockCategoryRepository) GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*dto.Category, error) {
 	args := m.Called(ctx, categoryID, includeDeletedRecord)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*schema.Category), args.Error(1)
+	return args.Get(0).(*dto.Category), args.Error(1)
 }
 
-func (m *MockCategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error) {
+func (m *MockCategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) ([]dto.CategoriesListItems, error) {
 	args := m.Called(ctx, userID, payload, includeDeletedRecords)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]schema.GetCategoriesResponse), args.Error(1)
+	return args.Get(0).([]dto.CategoriesListItems), args.Error(1)
 }
 
-func (m *MockCategoryRepository) CountCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
+func (m *MockCategoryRepository) CountCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
 	args := m.Called(ctx, userID, payload, includeDeletedRecords)
 	return args.Int(0), args.Error(1)
 }
 
-func (m *MockCategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *schema.UpdateCategoryRequest, considerDeletedRecords bool) (*schema.UpdateCategoryResponse, error) {
+func (m *MockCategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *dto.UpdateCategoryRequest, considerDeletedRecords bool) (*dto.Category, error) {
 	args := m.Called(ctx, categoryID, payload, considerDeletedRecords)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).(*schema.UpdateCategoryResponse), args.Error(1)
+	return args.Get(0).(*dto.Category), args.Error(1)
 }
 
 func (m *MockCategoryRepository) DeleteCategory(ctx context.Context, categoryID uuid.UUID, isHardDelete *bool) error {
@@ -67,7 +68,7 @@ var (
 
 func TestCategoryService_CreateCategory(t *testing.T) {
 	req := &schema.CreateCategoryRequest{Name: "Work"}
-	expected := &schema.CreateCategoryResponse{ID: uuid.New(), Name: "Work"}
+	expected := &dto.Category{ID: uuid.New(), Name: "Work"}
 
 	tests := []struct {
 		name    string
@@ -78,7 +79,7 @@ func TestCategoryService_CreateCategory(t *testing.T) {
 		{
 			name: "success",
 			setup: func(m *MockCategoryRepository) {
-				m.On("CreateCategory", ctx, userID, req).Return(expected, nil)
+				m.On("CreateCategory", ctx, userID, mock.Anything).Return(expected, nil)
 			},
 			check: func(t *testing.T, result *schema.CreateCategoryResponse) {
 				assert.Equal(t, expected.ID, result.ID)
@@ -88,7 +89,7 @@ func TestCategoryService_CreateCategory(t *testing.T) {
 		{
 			name: "repo error",
 			setup: func(m *MockCategoryRepository) {
-				m.On("CreateCategory", ctx, userID, req).Return(nil, assert.AnError)
+				m.On("CreateCategory", ctx, userID, mock.Anything).Return(nil, assert.AnError)
 			},
 			wantErr: assert.AnError,
 		},
@@ -129,7 +130,7 @@ func TestCategoryService_GetCategoryByID(t *testing.T) {
 		{
 			name: "success",
 			setup: func(m *MockCategoryRepository) {
-				m.On("GetCategoryByID", ctx, categoryID, false).Return(&schema.Category{
+				m.On("GetCategoryByID", ctx, categoryID, false).Return(&dto.Category{
 					ID: categoryID, UserID: userID, Name: "Work",
 				}, nil)
 			},
@@ -142,7 +143,7 @@ func TestCategoryService_GetCategoryByID(t *testing.T) {
 		{
 			name: "ownership violation",
 			setup: func(m *MockCategoryRepository) {
-				m.On("GetCategoryByID", ctx, categoryID, false).Return(&schema.Category{
+				m.On("GetCategoryByID", ctx, categoryID, false).Return(&dto.Category{
 					ID: categoryID, UserID: "other-user-id", Name: "Work",
 				}, nil)
 			},
@@ -199,16 +200,16 @@ func TestCategoryService_GetAllCategories(t *testing.T) {
 		{
 			name: "success",
 			setup: func(m *MockCategoryRepository) {
-				categories := []schema.GetCategoriesResponse{
+				categories := []dto.CategoriesListItems{
 					{ID: uuid.New(), Name: "Work"},
 					{ID: uuid.New(), Name: "Personal"},
 				}
 				m.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(categories, nil)
+				}), mock.Anything, false).Return(categories, nil)
 				m.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(2, nil)
+				}), mock.Anything, false).Return(2, nil)
 			},
 			check: func(t *testing.T, result *schema.PaginatedResponse[schema.GetCategoriesResponse]) {
 				assert.Len(t, result.Data, 2)
@@ -221,16 +222,16 @@ func TestCategoryService_GetAllCategories(t *testing.T) {
 		{
 			name: "total pages ceiling",
 			setup: func(m *MockCategoryRepository) {
-				categories := make([]schema.GetCategoriesResponse, 15)
+				categories := make([]dto.CategoriesListItems, 15)
 				for i := 0; i < 15; i++ {
-					categories[i] = schema.GetCategoriesResponse{ID: uuid.New(), Name: "Category"}
+					categories[i] = dto.CategoriesListItems{ID: uuid.New(), Name: "Category"}
 				}
 				m.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(categories, nil)
+				}), mock.Anything, false).Return(categories, nil)
 				m.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(15, nil)
+				}), mock.Anything, false).Return(15, nil)
 			},
 			check: func(t *testing.T, result *schema.PaginatedResponse[schema.GetCategoriesResponse]) {
 				assert.Equal(t, 2, result.TotalPages)
@@ -241,10 +242,10 @@ func TestCategoryService_GetAllCategories(t *testing.T) {
 			setup: func(m *MockCategoryRepository) {
 				m.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return([]schema.GetCategoriesResponse{}, nil)
+				}), mock.Anything, false).Return([]dto.CategoriesListItems{}, nil)
 				m.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(0, nil)
+				}), mock.Anything, false).Return(0, nil)
 			},
 			check: func(t *testing.T, result *schema.PaginatedResponse[schema.GetCategoriesResponse]) {
 				assert.Equal(t, 0, result.Total)
@@ -257,7 +258,7 @@ func TestCategoryService_GetAllCategories(t *testing.T) {
 			setup: func(m *MockCategoryRepository) {
 				m.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(nil, assert.AnError)
+				}), mock.Anything, false).Return(nil, assert.AnError)
 			},
 			wantErr: assert.AnError,
 		},
@@ -266,12 +267,12 @@ func TestCategoryService_GetAllCategories(t *testing.T) {
 			setup: func(m *MockCategoryRepository) {
 				m.On("GetAllCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return([]schema.GetCategoriesResponse{
+				}), mock.Anything, false).Return([]dto.CategoriesListItems{
 					{ID: uuid.New(), Name: "Work"},
 				}, nil)
 				m.On("CountCategories", ctx, mock.MatchedBy(func(u *string) bool {
 					return u != nil && *u == userID
-				}), query, false).Return(0, assert.AnError)
+				}), mock.Anything, false).Return(0, assert.AnError)
 			},
 			wantErr: assert.AnError,
 		},
@@ -314,14 +315,14 @@ func TestCategoryService_UpdateCategory(t *testing.T) {
 		{
 			name: "success",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: userID, Name: "Original",
 				}
-				expected := &schema.UpdateCategoryResponse{
+				expected := &dto.Category{
 					ID: categoryID, Name: newName,
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)
-				m.On("UpdateCategory", ctx, categoryID, req, false).Return(expected, nil)
+				m.On("UpdateCategory", ctx, categoryID, mock.Anything, false).Return(expected, nil)
 			},
 			check: func(t *testing.T, result *schema.UpdateCategoryResponse) {
 				assert.Equal(t, categoryID, result.ID)
@@ -331,7 +332,7 @@ func TestCategoryService_UpdateCategory(t *testing.T) {
 		{
 			name: "ownership violation",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: "other-user-id", Name: "Original",
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)
@@ -348,11 +349,11 @@ func TestCategoryService_UpdateCategory(t *testing.T) {
 		{
 			name: "update error",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: userID, Name: "Original",
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)
-				m.On("UpdateCategory", ctx, categoryID, req, false).Return(nil, assert.AnError)
+				m.On("UpdateCategory", ctx, categoryID, mock.Anything, false).Return(nil, assert.AnError)
 			},
 			wantErr: assert.AnError,
 		},
@@ -397,7 +398,7 @@ func TestCategoryService_DeleteCategory(t *testing.T) {
 		{
 			name: "success",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: userID, Name: "Work",
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)
@@ -407,7 +408,7 @@ func TestCategoryService_DeleteCategory(t *testing.T) {
 		{
 			name: "ownership violation",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: "other-user-id", Name: "Work",
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)
@@ -424,7 +425,7 @@ func TestCategoryService_DeleteCategory(t *testing.T) {
 		{
 			name: "delete error",
 			setup: func(m *MockCategoryRepository) {
-				fetched := &schema.Category{
+				fetched := &dto.Category{
 					ID: categoryID, UserID: userID, Name: "Work",
 				}
 				m.On("GetCategoryByID", ctx, categoryID, false).Return(fetched, nil)

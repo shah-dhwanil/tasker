@@ -10,7 +10,7 @@ import (
 	"github.com/shah-dhwanil/tasker/internal/database"
 	pkgErrors "github.com/shah-dhwanil/tasker/internal/errors"
 	"github.com/shah-dhwanil/tasker/internal/observability"
-	"github.com/shah-dhwanil/tasker/internal/schema"
+	"github.com/shah-dhwanil/tasker/internal/schema/dto"
 	"go.uber.org/zap"
 )
 
@@ -33,10 +33,10 @@ func(r *CategoryRepository) WithExecutor(executor database.DBTX) *CategoryReposi
 const createQuery = `
 INSERT INTO tasker.todo_categories (id, name, user_id, description, metadata)
 VALUES (@id, @name, @user_id, @description, @metadata)
-RETURNING id, name, description, metadata, created_at, updated_at
+RETURNING id, user_id, name, description, metadata, created_at, updated_at
 `
 
-func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id string, category *schema.CreateCategoryRequest) (*schema.CreateCategoryResponse, error) {
+func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id string, category *dto.CreateCategoryRequest) (*dto.Category, error) {
 	logger := observability.FromContext(ctx)
 	id, err := uuid.NewV7()
 	if err != nil {
@@ -51,9 +51,9 @@ func (r *CategoryRepository) CreateCategory(ctx context.Context, user_id string,
 	args["user_id"] = user_id
 	
 	rows, err := database.QueryInTransaction(ctx,r.executor,
-		func(executor database.Transaction) (schema.CreateCategoryResponse, error) {
+		func(executor database.Transaction) (dto.Category, error) {
 			rows, _ := executor.Query(ctx, createQuery, args)
-			return pgx.CollectOneRow(rows, pgx.RowToStructByName[schema.CreateCategoryResponse])
+			return pgx.CollectOneRow(rows, pgx.RowToStructByName[dto.Category])
 		},
 	)
 	if err != nil {
@@ -68,7 +68,7 @@ FROM tasker.todo_categories
 WHERE id = @id
 `
 
-func (r *CategoryRepository) GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*schema.Category, error) {
+func (r *CategoryRepository) GetCategoryByID(ctx context.Context, categoryID uuid.UUID, includeDeletedRecord bool) (*dto.Category, error) {
 	args := pgx.NamedArgs{
 		"id": categoryID.String(),
 	}
@@ -79,9 +79,9 @@ func (r *CategoryRepository) GetCategoryByID(ctx context.Context, categoryID uui
 	categoryRes,err:= database.QueryInTransaction(
 		ctx,
 		r.executor,
-		func(d database.Transaction) (schema.Category,error) {
+		func(d database.Transaction) (dto.Category,error) {
 			rows, _ := d.Query(ctx, getByIDQueryWithDeleted, args)
-			return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[schema.Category])
+			return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[dto.Category])
 		},
 	)
 	
@@ -99,7 +99,7 @@ ORDER BY %s
 LIMIT @limit OFFSET @offset
 `
 
-func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery,includeDeletedRecords bool) ([]schema.GetCategoriesResponse, error){
+func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery,includeDeletedRecords bool) ([]dto.CategoriesListItems, error){
 	whereClause := make([]string, 0)
 	args, err := database.StructToNamedArgs(payload)
 	if err != nil {
@@ -116,9 +116,6 @@ func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *strin
 	if !includeDeletedRecords {
 		whereClause = append(whereClause, "is_deleted = false")
 	}
-	if payload.Limit != nil && payload.Page != nil {
-		args["offset"] = (*payload.Page - 1) * *payload.Limit
-	}
 	orderByClause := make([]string, 0)
 	for _, orderBy := range payload.OrderBy {
 		col, dir := database.ExtractOrderParam(orderBy)
@@ -128,9 +125,9 @@ func (r *CategoryRepository) GetAllCategories(ctx context.Context, userID *strin
 	categories, err := database.QueryInTransaction(
 		ctx,
 		r.executor,
-		func(executor database.Transaction) ([]schema.GetCategoriesResponse,error) {
+		func(executor database.Transaction) ([]dto.CategoriesListItems,error) {
 			 rows, _ := executor.Query(ctx, query, args)
-			 return pgx.CollectRows(rows, pgx.RowToStructByName[schema.GetCategoriesResponse])
+			 return pgx.CollectRows(rows, pgx.RowToStructByName[dto.CategoriesListItems])
 		},
 	)
 	if err != nil {
@@ -143,9 +140,9 @@ const updateCategoryQuery = `
 UPDATE tasker.todo_categories
 SET %s
 WHERE id = @id %s
-RETURNING id, name, description, metadata, created_at, updated_at
+RETURNING id, user_id, name, description, metadata, created_at, updated_at
 `
-func (r *CategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *schema.UpdateCategoryRequest,considerDeletedRecords bool) (*schema.UpdateCategoryResponse, error) {
+func (r *CategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid.UUID, payload *dto.UpdateCategoryRequest,considerDeletedRecords bool) (*dto.Category, error) {
 	setClause := make([]string, 0)
 	args, err := database.StructToNamedArgs(payload)
 	if err != nil {
@@ -155,7 +152,7 @@ func (r *CategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid
 	if payload.Name != nil {
 		setClause = append(setClause, "name = @name")
 	}
-	if payload.Description != nil {
+	if payload.Description.IsSet() {
 		setClause = append(setClause, "description = @description")
 	}
 	if payload.Metadata != nil {
@@ -167,14 +164,7 @@ func (r *CategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid
 		if err != nil {
 			return nil, err
 		}
-		return &schema.UpdateCategoryResponse{
-			ID:          res.ID,
-			Name:        res.Name,
-			Description: res.Description,
-			Metadata:    res.Metadata,
-			CreatedAt:   res.CreatedAt,
-			UpdatedAt:   res.UpdatedAt,
-		}, nil
+		return res,nil
 	}
 	isDeleteClause := ""
 	if !considerDeletedRecords {
@@ -184,9 +174,9 @@ func (r *CategoryRepository) UpdateCategory(ctx context.Context, categoryID uuid
 	categoryRes, err := database.QueryInTransaction(
 		ctx,
 		r.executor,
-		func(executor database.Transaction) (schema.UpdateCategoryResponse,error) {
+		func(executor database.Transaction) (dto.Category,error) {
 			rows, _ := executor.Query(ctx, query, args)
-			return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[schema.UpdateCategoryResponse])
+			return pgx.CollectExactlyOneRow(rows, pgx.RowToStructByName[dto.Category])
 		},
 	)
 	if err != nil {
@@ -236,7 +226,7 @@ FROM tasker.todo_categories
 WHERE %s
 `
 
-func (r *CategoryRepository) CountCategories(ctx context.Context, userID *string, payload *schema.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
+func (r *CategoryRepository) CountCategories(ctx context.Context, userID *string, payload *dto.GetCategoriesQuery, includeDeletedRecords bool) (int, error) {
 	whereClause := make([]string, 0)
 	args := pgx.NamedArgs{}
 	if userID != nil {

@@ -39,7 +39,7 @@ type CreateCategoryResponse struct {
 
 type UpdateCategoryRequest struct {
 	Name        *string    `json:"name" validate:"omitempty,max=32" db:"name,omitempty"`
-	Description *string    `json:"description" validate:"omitempty,max=256" db:"description,omitempty"`
+	Description Nullable[*string]    `json:"description" validate:"omitempty,max=256" db:"description,omitempty" swaggertype:"string"`
 	Metadata    *map[string]any    `json:"metadata" db:"metadata,omitempty"`
 }
 

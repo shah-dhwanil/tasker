@@ -26,7 +26,7 @@ func getTodoRepository(t *testing.T, repo *repository.Repository, tx database.Tr
 
 func createTestTodo(t *testing.T, ctx context.Context, todoRepo repository.Todo, categoryRepo *repository.CategoryRepository, userID string, payload *dto.CreateTodoRequest) *dto.Todo {
 	t.Helper()
-	cat := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+	cat := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 		Name: "Test-Cat-" + uuid.New().String()[:8],
 	})
 	payload.CategoryID = &cat.ID
@@ -438,10 +438,10 @@ func TestTodoRepository_GetAll(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				cat1 := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				cat1 := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "Category-One",
 				})
-				cat2 := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				cat2 := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "Category-Two",
 				})
 
@@ -773,10 +773,10 @@ func TestTodoRepository_Count(t *testing.T) {
 				todoRepo := getTodoRepository(t, repo, tx)
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				cat1 := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				cat1 := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "Count-Cat1",
 				})
-				cat2 := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				cat2 := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "Count-Cat2",
 				})
 
@@ -1062,7 +1062,7 @@ func TestTodoRepository_Update(t *testing.T) {
 					Title: "Category Change", Status: "pending", Priority: 1,
 				})
 
-				newCat := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				newCat := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "New-Category",
 				})
 
@@ -1192,7 +1192,7 @@ func TestTodoRepository_Update(t *testing.T) {
 				parent := createTestTodo(t, ctx, todoRepo, categoryRepo, userID, &dto.CreateTodoRequest{
 					Title: "New Parent", Status: "pending", Priority: 1,
 				})
-				newCat := createTestCategory(t, ctx, categoryRepo, userID, &schema.CreateCategoryRequest{
+				newCat := createTestCategory(t, ctx, categoryRepo, userID, &dto.CreateCategoryRequest{
 					Name: "New-Cat",
 				})
 				newTitle := "All Updated"

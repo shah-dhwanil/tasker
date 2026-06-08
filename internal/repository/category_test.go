@@ -12,6 +12,7 @@ import (
 	"github.com/shah-dhwanil/tasker/internal/errors"
 	"github.com/shah-dhwanil/tasker/internal/repository"
 	"github.com/shah-dhwanil/tasker/internal/schema"
+	"github.com/shah-dhwanil/tasker/internal/schema/dto"
 	pkgTesting "github.com/shah-dhwanil/tasker/internal/testing"
 )
 
@@ -20,7 +21,7 @@ func getCategoryRepository(t *testing.T, repository *repository.Repository, tx d
 	return repository.CategoryRepository.WithExecutor(tx)
 }
 
-func createTestCategory(t *testing.T, ctx context.Context, repo *repository.CategoryRepository, userID string, payload *schema.CreateCategoryRequest) *schema.CreateCategoryResponse {
+func createTestCategory(t *testing.T, ctx context.Context, repo *repository.CategoryRepository, userID string, payload *dto.CreateCategoryRequest) *dto.Category {
 	t.Helper()
 	resp, err := repo.CreateCategory(ctx, userID, payload)
 	require.NoError(t, err)
@@ -47,7 +48,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				resp, err := categoryRepo.CreateCategory(ctx, userID, &schema.CreateCategoryRequest{
+				resp, err := categoryRepo.CreateCategory(ctx, userID, &dto.CreateCategoryRequest{
 					Name:        "My Category",
 					Description: &desc,
 					Metadata:    meta,
@@ -75,7 +76,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 				resp, err := categoryRepo.CreateCategory(
 					ctx,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "Minimal"},
+					&dto.CreateCategoryRequest{Name: "Minimal"},
 				)
 
 				require.NoError(t, err)
@@ -96,14 +97,14 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 				_, err := categoryRepo.CreateCategory(
 					ctx,
 					userID,
-					&schema.CreateCategoryRequest{Name: "Dup"},
+					&dto.CreateCategoryRequest{Name: "Dup"},
 				)
 				require.NoError(t, err)
 
 				_, err = categoryRepo.CreateCategory(
 					ctx,
 					userID,
-					&schema.CreateCategoryRequest{Name: "Dup"},
+					&dto.CreateCategoryRequest{Name: "Dup"},
 				)
 
 				assertAppErrorType(t, err, errors.ResourceAlreadyExists)
@@ -117,14 +118,14 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 				_, err := categoryRepo.CreateCategory(
 					ctx,
 					"user-a",
-					&schema.CreateCategoryRequest{Name: "Common"},
+					&dto.CreateCategoryRequest{Name: "Common"},
 				)
 				require.NoError(t, err)
 
 				_, err = categoryRepo.CreateCategory(
 					ctx,
 					"user-b",
-					&schema.CreateCategoryRequest{Name: "Common"},
+					&dto.CreateCategoryRequest{Name: "Common"},
 				)
 				require.NoError(t, err)
 			},
@@ -141,7 +142,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{Name: "Reuse"},
+					&dto.CreateCategoryRequest{Name: "Reuse"},
 				)
 
 				require.NoError(t, categoryRepo.DeleteCategory(ctx, created.ID, nil))
@@ -149,7 +150,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 				_, err := categoryRepo.CreateCategory(
 					ctx,
 					userID,
-					&schema.CreateCategoryRequest{Name: "Reuse"},
+					&dto.CreateCategoryRequest{Name: "Reuse"},
 				)
 
 				assertAppErrorType(t, err, errors.ResourceAlreadyExists)
@@ -163,7 +164,7 @@ func TestCategoryRepository_CreateCategory(t *testing.T) {
 				resp, err := categoryRepo.CreateCategory(
 					ctx,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "NoDesc"},
+					&dto.CreateCategoryRequest{Name: "NoDesc"},
 				)
 
 				require.NoError(t, err)
@@ -208,7 +209,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Fetch Me",
 					},
 				)
@@ -253,7 +254,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "To Delete",
 					},
 				)
@@ -284,7 +285,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "To Fetch Deleted",
 					},
 				)
@@ -316,7 +317,7 @@ func TestCategoryRepository_GetCategoryByID(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Hard Delete",
 					},
 				)
@@ -374,13 +375,13 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "A"},
+					&dto.CreateCategoryRequest{Name: "A"},
 				)
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "B"},
+					&dto.CreateCategoryRequest{Name: "B"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -401,14 +402,14 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userA,
-					&schema.CreateCategoryRequest{Name: "A's"},
+					&dto.CreateCategoryRequest{Name: "A's"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userB,
-					&schema.CreateCategoryRequest{Name: "B's"},
+					&dto.CreateCategoryRequest{Name: "B's"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -431,18 +432,16 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Shopping List"},
+					&dto.CreateCategoryRequest{Name: "Shopping List"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Work Tasks"},
+					&dto.CreateCategoryRequest{Name: "Work Tasks"},
 				)
 
 				search := "shop"
 
-				query, _ := (&schema.GetCategoriesQuery{
-					Search: &search,
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10, Search: &search}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -465,20 +464,18 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Gamma"},
+					&dto.CreateCategoryRequest{Name: "Gamma"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Alpha"},
+					&dto.CreateCategoryRequest{Name: "Alpha"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Beta"},
+					&dto.CreateCategoryRequest{Name: "Beta"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{
-					OrderBy: []string{"name"},
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10, OrderBy: []string{"name"}}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -503,11 +500,11 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Active"},
+					&dto.CreateCategoryRequest{Name: "Active"},
 				)
 
 				deleted := createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Deleted"},
+					&dto.CreateCategoryRequest{Name: "Deleted"},
 				)
 
 				require.NoError(
@@ -515,7 +512,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -535,7 +532,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				nonExistentUser := "non-existent-user"
 
@@ -569,18 +566,11 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 						ctx,
 						categoryRepo,
 						userID,
-						&schema.CreateCategoryRequest{Name: name},
+						&dto.CreateCategoryRequest{Name: name},
 					)
 				}
 
-				limit := 2
-				page := 2
-
-				query, _ := (&schema.GetCategoriesQuery{
-					Limit:   &limit,
-					Page:    &page,
-					OrderBy: []string{"name"},
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 2, Limit: 2, OrderBy: []string{"name"}}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -604,20 +594,18 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Alpha"},
+					&dto.CreateCategoryRequest{Name: "Alpha"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Beta"},
+					&dto.CreateCategoryRequest{Name: "Beta"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Gamma"},
+					&dto.CreateCategoryRequest{Name: "Gamma"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{
-					OrderBy: []string{"-name"},
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10, OrderBy: []string{"-name"}}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -642,11 +630,11 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Active"},
+					&dto.CreateCategoryRequest{Name: "Active"},
 				)
 
 				deleted := createTestCategory(t, ctx, categoryRepo, userID,
-					&schema.CreateCategoryRequest{Name: "Deleted"},
+					&dto.CreateCategoryRequest{Name: "Deleted"},
 				)
 
 				require.NoError(
@@ -654,7 +642,7 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -673,14 +661,14 @@ func TestCategoryRepository_GetAllCategories(t *testing.T) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
 				createTestCategory(t, ctx, categoryRepo, "user-a",
-					&schema.CreateCategoryRequest{Name: "UserA"},
+					&dto.CreateCategoryRequest{Name: "UserA"},
 				)
 
 				createTestCategory(t, ctx, categoryRepo, "user-b",
-					&schema.CreateCategoryRequest{Name: "UserB"},
+					&dto.CreateCategoryRequest{Name: "UserB"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				cats, err := categoryRepo.GetAllCategories(
 					ctx,
@@ -732,7 +720,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "Old"},
+					&dto.CreateCategoryRequest{Name: "Old"},
 				)
 
 				newName := "New"
@@ -740,7 +728,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name: &newName,
 					},
 					false,
@@ -763,7 +751,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "Desc"},
+					&dto.CreateCategoryRequest{Name: "Desc"},
 				)
 
 				newDesc := "Updated"
@@ -771,8 +759,8 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
-						Description: &newDesc,
+					&dto.UpdateCategoryRequest{
+						Description: schema.Nullable[*string]{Data: &newDesc, IsExplicitlySet: true},
 					},
 					false,
 				)
@@ -794,7 +782,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "Meta"},
+					&dto.CreateCategoryRequest{Name: "Meta"},
 				)
 
 				meta := map[string]any{"key": "val"}
@@ -802,7 +790,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Metadata: &meta,
 					},
 					false,
@@ -824,7 +812,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "Orig"},
+					&dto.CreateCategoryRequest{Name: "Orig"},
 				)
 
 				n := "Updated"
@@ -834,9 +822,9 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name:        &n,
-						Description: &d,
+						Description: schema.Nullable[*string]{Data: &d, IsExplicitlySet: true},
 						Metadata:    &m,
 					},
 					false,
@@ -860,13 +848,13 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{Name: "No Change"},
+					&dto.CreateCategoryRequest{Name: "No Change"},
 				)
 
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{},
+					&dto.UpdateCategoryRequest{},
 					false,
 				)
 
@@ -887,7 +875,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				_, err := categoryRepo.UpdateCategory(
 					ctx,
 					uuid.New(),
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name: &n,
 					},
 					false,
@@ -906,7 +894,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "To Update Deleted",
 					},
 				)
@@ -921,7 +909,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				_, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name: &n,
 					},
 					false,
@@ -942,7 +930,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Existing",
 					},
 				)
@@ -952,7 +940,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "To Rename",
 					},
 				)
@@ -962,7 +950,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				_, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name: &n,
 					},
 					false,
@@ -981,7 +969,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Soft Deleted Update",
 					},
 				)
@@ -996,7 +984,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
+					&dto.UpdateCategoryRequest{
 						Name: &n,
 					},
 					true,
@@ -1020,7 +1008,7 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Clear Desc",
 					},
 				)
@@ -1028,8 +1016,8 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				_, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
-						Description: &desc,
+					&dto.UpdateCategoryRequest{
+						Description: schema.Nullable[*string]{Data: &desc, IsExplicitlySet: true},
 					},
 					false,
 				)
@@ -1041,8 +1029,8 @@ func TestCategoryRepository_UpdateCategory(t *testing.T) {
 				updated, err := categoryRepo.UpdateCategory(
 					ctx,
 					created.ID,
-					&schema.UpdateCategoryRequest{
-						Description: &empty,
+					&dto.UpdateCategoryRequest{
+						Description: schema.Nullable[*string]{Data: &empty, IsExplicitlySet: true},
 					},
 					false,
 				)
@@ -1091,7 +1079,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Soft",
 					},
 				)
@@ -1128,7 +1116,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Hard",
 					},
 				)
@@ -1170,7 +1158,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Default",
 					},
 				)
@@ -1199,7 +1187,7 @@ func TestCategoryRepository_DeleteCategory(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Double Soft",
 					},
 				)
@@ -1256,7 +1244,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{Name: "A"},
+					&dto.CreateCategoryRequest{Name: "A"},
 				)
 
 				createTestCategory(
@@ -1264,7 +1252,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{Name: "B"},
+					&dto.CreateCategoryRequest{Name: "B"},
 				)
 
 				createTestCategory(
@@ -1272,10 +1260,10 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{Name: "C"},
+					&dto.CreateCategoryRequest{Name: "C"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1300,7 +1288,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userA,
-					&schema.CreateCategoryRequest{Name: "A's"},
+					&dto.CreateCategoryRequest{Name: "A's"},
 				)
 
 				createTestCategory(
@@ -1308,7 +1296,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userA,
-					&schema.CreateCategoryRequest{Name: "A's 2"},
+					&dto.CreateCategoryRequest{Name: "A's 2"},
 				)
 
 				createTestCategory(
@@ -1316,10 +1304,10 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userB,
-					&schema.CreateCategoryRequest{Name: "B's"},
+					&dto.CreateCategoryRequest{Name: "B's"},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1344,7 +1332,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Shopping List",
 					},
 				)
@@ -1354,16 +1342,14 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Work Tasks",
 					},
 				)
 
 				search := "shop"
 
-				query, _ := (&schema.GetCategoriesQuery{
-					Search: &search,
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10, Search: &search}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1388,7 +1374,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Active",
 					},
 				)
@@ -1398,7 +1384,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Deleted",
 					},
 				)
@@ -1408,7 +1394,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1433,7 +1419,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Active",
 					},
 				)
@@ -1443,7 +1429,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Deleted",
 					},
 				)
@@ -1453,7 +1439,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					categoryRepo.DeleteCategory(ctx, deleted.ID, nil),
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1476,7 +1462,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id5",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "UserA",
 					},
 				)
@@ -1486,7 +1472,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id5",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "UserB",
 					},
 				)
@@ -1496,12 +1482,12 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					"test-user-id5",
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "UserC",
 					},
 				)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
@@ -1519,7 +1505,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 			run: func(t *testing.T, tx database.Transaction, repo *repository.Repository) {
 				categoryRepo := getCategoryRepository(t, repo, tx)
 
-				query, _ := (&schema.GetCategoriesQuery{}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10}
 
 				nonExistentUser := "non-existent-user"
 
@@ -1546,7 +1532,7 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Shopping",
 					},
 				)
@@ -1556,16 +1542,14 @@ func TestCategoryRepository_CountCategories(t *testing.T) {
 					ctx,
 					categoryRepo,
 					userID,
-					&schema.CreateCategoryRequest{
+					&dto.CreateCategoryRequest{
 						Name: "Work",
 					},
 				)
 
 				search := "nonexistent"
 
-				query, _ := (&schema.GetCategoriesQuery{
-					Search: &search,
-				}).Normalize()
+				query := &dto.GetCategoriesQuery{Offset: 0, Limit: 10, Search: &search}
 
 				count, err := categoryRepo.CountCategories(
 					ctx,
